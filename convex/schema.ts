@@ -15,4 +15,11 @@ export default defineSchema({
   transitMatches: defineTable({ blurb: v.string(), status: v.union(v.literal("proposed"), v.literal("confirmed"), v.literal("declined")) }),
   transitMatchMembers: defineTable({ matchId: v.id("transitMatches"), intentId: v.id("transitIntents") }).index("by_match", ["matchId"]).index("by_intent", ["intentId"]),
   transitFallbackCache: defineTable({ routeId: v.string(), stopId: v.string(), nextArrivals: v.array(v.number()), fetchedAt: v.number() }).index("by_stop", ["stopId"]),
+
+  // --- Challenge 01 add-on: Jambase-powered EPK generator (separate feature, own tables) ---
+  epkRequests: defineTable({
+    artistName: v.string(), status: v.union(v.literal("ready"), v.literal("error")),
+    touringHistorySummary: v.optional(v.string()), generatedBio: v.optional(v.string()), generatedPitch: v.optional(v.string()),
+    usedRealJambaseData: v.optional(v.boolean()), errorMessage: v.optional(v.string()), createdAt: v.number(),
+  }).index("by_created", ["createdAt"]),
 });
