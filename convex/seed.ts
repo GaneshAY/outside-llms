@@ -198,6 +198,9 @@ const OSL_GENRES = [
 
 const SPOTIFY_TOP_ARTIST_COUNT = 10;
 const SPOTIFY_TOP_GENRE_COUNT = 4;
+const SPOTIFY_LINEUP_DAY_BUCKET_SIZE = 8;
+const SPOTIFY_JAMES_BOND_ARTISTS_PER_DAY = 5;
+const JAMES_BOND_INTENT_DAYS = 7;
 
 const createSeededRng = (seed: number) => {
   let value = seed >>> 0;
@@ -219,9 +222,36 @@ const pickUnique = (input: string[], count: number, rng: () => number) => {
   return result;
 };
 
+const normalizeDisplayNameValue = (value: string | undefined | null) => (value ?? "").trim().toLowerCase();
+
+const isJamesBondProfileName = (value: string | undefined | null) => normalizeDisplayNameValue(value) === "james bond";
+
+const buildJamesBondProfileArtists = () => {
+  const artists: string[] = [];
+  const totalBuckets = Math.max(1, Math.ceil(OSL_LINEUP_ARTISTS.length / SPOTIFY_LINEUP_DAY_BUCKET_SIZE));
+
+  for (let dayOffset = 0; dayOffset < totalBuckets; dayOffset++) {
+    const bucketStart = dayOffset * SPOTIFY_LINEUP_DAY_BUCKET_SIZE;
+    const bucket = OSL_LINEUP_ARTISTS.slice(bucketStart, bucketStart + SPOTIFY_LINEUP_DAY_BUCKET_SIZE);
+    artists.push(...bucket.slice(0, Math.min(SPOTIFY_JAMES_BOND_ARTISTS_PER_DAY, bucket.length)));
+  }
+
+  return artists;
+};
+
+const getJamesBondProfile = () => {
+  const topArtists = buildJamesBondProfileArtists();
+  return {
+    handle: "@james_bond",
+    topArtists,
+    topGenres: OSL_GENRES.slice(0, SPOTIFY_TOP_GENRE_COUNT),
+    topTracks: topArtists.slice(0, SPOTIFY_TOP_ARTIST_COUNT).map((artist) => `${artist} live`),
+    source: "mockJamesBondSeed",
+  };
+};
+
 const normalizeDayIndex = (dayOffset: number) => {
-  const bucketSize = 8;
-  const buckets = Math.max(1, Math.ceil(OSL_LINEUP_ARTISTS.length / bucketSize));
+  const buckets = Math.max(1, Math.ceil(OSL_LINEUP_ARTISTS.length / SPOTIFY_LINEUP_DAY_BUCKET_SIZE));
   const safe = ((dayOffset % buckets) + buckets) % buckets;
   return safe;
 };
@@ -235,9 +265,8 @@ const isSparseProfile = (profile: unknown) => {
 const getSpotifyProfileForIndex = (index: number, dayOffset = 0) => {
   const profileSeed = 20260902 + index * 97 + Math.max(0, dayOffset) * 31;
   const rng = createSeededRng(profileSeed);
-  const bucketSize = 8;
-  const bucketStart = normalizeDayIndex(dayOffset) * bucketSize;
-  const dayBucket = OSL_LINEUP_ARTISTS.slice(bucketStart, bucketStart + bucketSize);
+  const bucketStart = normalizeDayIndex(dayOffset) * SPOTIFY_LINEUP_DAY_BUCKET_SIZE;
+  const dayBucket = OSL_LINEUP_ARTISTS.slice(bucketStart, bucketStart + SPOTIFY_LINEUP_DAY_BUCKET_SIZE);
   const sharedArtists = pickUnique(dayBucket, Math.min(3, SPOTIFY_TOP_ARTIST_COUNT), rng);
   const remainingPool = OSL_LINEUP_ARTISTS.filter((artist) => !sharedArtists.includes(artist));
   const fillerArtists = pickUnique(remainingPool, SPOTIFY_TOP_ARTIST_COUNT - sharedArtists.length, rng);
@@ -249,6 +278,48 @@ const getSpotifyProfileForIndex = (index: number, dayOffset = 0) => {
     topTracks: [...sharedArtists, ...fillerArtists].slice(0, SPOTIFY_TOP_ARTIST_COUNT).map((artist) => `${artist} highlight`),
     source: "mockFestivalSeed",
   };
+};
+
+const seedJamesBondMockUser = async (ctx: any) => {
+  const userId = await ctx.db.insert("users", {
+    displayName: "James Bond",
+    authType: "guest",
+    spotifyProfile: getJamesBondProfile(),
+  });
+
+  let insertedIntents = 0;
+
+  for (let dayOffset = 0; dayOffset < JAMES_BOND_INTENT_DAYS; dayOffset++) {
+    const dayStart = FESTIVAL_START + dayOffset * DAY_MS;
+    if (dayStart > FESTIVAL_END) break;
+
+    for (const locationZone of DAYS) {
+      const zoneIndex = DAYS.indexOf(locationZone);
+      for (const direction of DIRECTIONS) {
+        const slot = SCHEDULE_HOURS[(dayOffset + zoneIndex) % SCHEDULE_HOURS.length];
+        const desiredTime = dayStart + slot * HOUR_MS +
+          ((dayOffset * 11 + zoneIndex * 13 + (direction === "departure" ? 7 : 0)) % 30) * MINUTE_MS;
+        if (isAfterFestival(desiredTime)) continue;
+
+        await ctx.db.insert("transitIntents", {
+          userId,
+          direction,
+          desiredTime,
+          locationZone,
+          flexibilityMinutes: 58,
+          startingPoint: STARTING_POINT_BY_ZONE[locationZone][dayOffset % STARTING_POINT_BY_ZONE[locationZone].length],
+          tier: computeTier(desiredTime, FESTIVAL_START),
+          manualUrgentOverride: false,
+          status: "pending",
+          groupId: "james-bond",
+        });
+
+        insertedIntents += 1;
+      }
+    }
+  }
+
+  return { usersAdded: 1, intentsAdded: insertedIntents, userId };
 };
 
 const isAfterFestival = (ms: number) => ms > FESTIVAL_END - 60_000;
@@ -340,7 +411,7 @@ const isLegacyDisplayName = (name: string | undefined) => {
   return trimmed === "" || trimmed === "outside lander" || /^demo fan/.test(trimmed) || /^guest fan/.test(trimmed);
 };
 
-const normalizeDisplayName = (userName: string | undefined, index: number) =>
+const normalizeMockDisplayName = (userName: string | undefined, index: number) =>
   isLegacyDisplayName(userName)
     ? REAL_NAMES[index % REAL_NAMES.length]
     : userName ?? REAL_NAMES[index % REAL_NAMES.length];
@@ -351,15 +422,21 @@ export const seedMockBackendData = mutation({
     const existingIntents = await ctx.db.query("transitIntents").collect();
     const existingUsers = await ctx.db.query("users").collect();
     const existingFallback = await ctx.db.query("transitFallbackCache").collect();
+    const hasJamesBondUser = existingUsers.some((user) => isJamesBondProfileName(user.displayName));
+    const shouldRefreshJamesBondProfile = existingUsers.some(
+      (user) => isJamesBondProfileName(user.displayName) && isSparseProfile(user.spotifyProfile),
+    );
     const needsLegacyNameRefresh = existingUsers.some(
       (user) => isLegacyDisplayName(user.displayName) || isSparseProfile(user.spotifyProfile),
     );
 
     if (!force && existingIntents.length >= 200 && existingUsers.length >= 200) {
+      let jamesBondSeedResult: { usersAdded: number; intentsAdded: number; userId?: string } = { usersAdded: 0, intentsAdded: 0 };
+
       if (needsLegacyNameRefresh) {
         for (let i = 0; i < existingUsers.length; i++) {
           const user = existingUsers[i];
-          const displayName = normalizeDisplayName(user.displayName, i);
+          const displayName = normalizeMockDisplayName(user.displayName, i);
           const updates: {
             displayName?: string;
             spotifyProfile?: {
@@ -376,15 +453,33 @@ export const seedMockBackendData = mutation({
           if (isSparseProfile(user.spotifyProfile)) {
             updates.spotifyProfile = getSpotifyProfileForIndex(i);
           }
+          if (isJamesBondProfileName(user.displayName) && isSparseProfile(user.spotifyProfile)) {
+            updates.spotifyProfile = getJamesBondProfile();
+          }
           if (Object.keys(updates).length > 0) {
             await ctx.db.patch(user._id, updates);
           }
         }
+      }
+
+      if (shouldRefreshJamesBondProfile) {
+        const jamesBondUsers = existingUsers.filter((user) => isJamesBondProfileName(user.displayName));
+        for (const jamesBondUser of jamesBondUsers) {
+          await ctx.db.patch(jamesBondUser._id, { spotifyProfile: getJamesBondProfile() });
+        }
+      }
+
+      if (!hasJamesBondUser) {
+        jamesBondSeedResult = await seedJamesBondMockUser(ctx);
+      }
+
+      if (needsLegacyNameRefresh || shouldRefreshJamesBondProfile || !hasJamesBondUser || jamesBondSeedResult.usersAdded > 0) {
         return {
           seeded: true,
-          users: existingUsers.length,
-          intents: existingIntents.length,
+          users: existingUsers.length + jamesBondSeedResult.usersAdded,
+          intents: existingIntents.length + jamesBondSeedResult.intentsAdded,
           fallbackRows: existingFallback.length,
+          jamesBondSeeded: !hasJamesBondUser || jamesBondSeedResult.usersAdded > 0,
           migratedDisplayNames: true,
         };
       }
@@ -403,9 +498,18 @@ export const seedMockBackendData = mutation({
     let insertedIntents = 0;
     let insertedUsers = 0;
     let insertedFallbackRows = 0;
+    let jamesBondSeedResult: { usersAdded: number; intentsAdded: number; userId?: string } = { usersAdded: 0, intentsAdded: 0 };
 
     // Seed fan intents for matching.
     let createdCount = 0;
+
+    if (shouldRefreshJamesBondProfile) {
+      const jamesBondUsers = existingUsers.filter((user) => isJamesBondProfileName(user.displayName));
+      for (const jamesBondUser of jamesBondUsers) {
+        await ctx.db.patch(jamesBondUser._id, { spotifyProfile: getJamesBondProfile() });
+      }
+    }
+
     for (let dayOffset = 0; ; dayOffset++) {
       const dayStart = FESTIVAL_START + dayOffset * DAY_MS;
       if (dayStart > FESTIVAL_END) break;
@@ -453,11 +557,17 @@ export const seedMockBackendData = mutation({
       }
     }
 
+    if (!hasJamesBondUser) {
+      jamesBondSeedResult = await seedJamesBondMockUser(ctx);
+      insertedUsers += jamesBondSeedResult.usersAdded;
+      insertedIntents += jamesBondSeedResult.intentsAdded;
+    }
+
     // Additional hardening pass to normalize older mock user names in case placeholder records already exist.
     // Keeps any user-entered custom names untouched while replacing only legacy mock placeholders.
     for (let i = 0; i < existingUsers.length; i++) {
       const user = existingUsers[i];
-      const displayName = normalizeDisplayName(user.displayName, i);
+      const displayName = normalizeMockDisplayName(user.displayName, i);
       if (displayName !== user.displayName) {
         await ctx.db.patch(user._id, { displayName });
       }

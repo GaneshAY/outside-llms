@@ -290,6 +290,19 @@ function MatchingList({
           const origin = fan.startingPoint?.trim();
           const isConnecting = connectingMatchIds.has(fan._id);
           const isConnected = connectedMatchIds.has(fan._id);
+          const overlapArtists = fan.spotifyMatch?.overlapArtists ?? [];
+          const overlapGenres = fan.spotifyMatch?.overlapGenres ?? [];
+          const overlapSummary: string[] = [];
+          const overlapSamples: string[] = [];
+
+          if (overlapArtists.length > 0) {
+            overlapSummary.push(`${overlapArtists.length} shared artists`);
+            overlapSamples.push(`shared artists: ${overlapArtists.slice(0, 2).join(", ")}`);
+          }
+          if (overlapGenres.length > 0) {
+            overlapSummary.push(`${overlapGenres.length} shared genres`);
+            overlapSamples.push(`shared genres: ${overlapGenres.slice(0, 2).join(", ")}`);
+          }
 
           return (
             <article key={fan._id}>
@@ -303,17 +316,8 @@ function MatchingList({
                 {fan.spotifyMatch && fan.spotifyMatch.score > 0 && (
                   <small>
                     🎶 Spotify: {fan.spotifyMatch.label}
-                    {fan.spotifyMatch.overlapArtists.length > 0
-                      ? ` · ${fan.spotifyMatch.overlapArtists.length} shared artists`
-                      : fan.spotifyMatch.overlapGenres.length > 0
-                        ? ` · ${fan.spotifyMatch.overlapGenres.length} shared genres`
-                        : ""
-                    }
-                    {fan.spotifyMatch.overlapArtists.length > 0
-                      ? ` · shared artists: ${fan.spotifyMatch.overlapArtists.slice(0, 2).join(", ")}`
-                      : fan.spotifyMatch.overlapGenres.length > 0
-                        ? ` · shared genres: ${fan.spotifyMatch.overlapGenres.slice(0, 2).join(", ")}`
-                        : ""}
+                    {overlapSummary.length > 0 ? ` · ${overlapSummary.join(" · ")}` : ""}
+                    {overlapSamples.length > 0 ? ` · ${overlapSamples.join(" · ")}` : ""}
                   </small>
                 )}
               </div>

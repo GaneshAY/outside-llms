@@ -249,6 +249,8 @@ const OSL_GENRES = [
 
 const SPOTIFY_TOP_ARTIST_COUNT = 10;
 const SPOTIFY_TOP_GENRE_COUNT = 4;
+const SPOTIFY_LINEUP_DAY_BUCKET_SIZE = 8;
+const SPOTIFY_JAMES_BOND_ARTISTS_PER_DAY = 5;
 
 const createSeededRng = (seed: number) => {
   let value = seed >>> 0;
@@ -268,7 +270,37 @@ const pickUnique = (input: string[], count: number, rng: () => number) => {
   return result;
 };
 
+const buildJamesBondProfileArtists = () => {
+  const artists: string[] = [];
+  const totalBuckets = Math.max(1, Math.ceil(OSL_LINEUP_ARTISTS.length / SPOTIFY_LINEUP_DAY_BUCKET_SIZE));
+
+  for (let dayOffset = 0; dayOffset < totalBuckets; dayOffset++) {
+    const bucketStart = dayOffset * SPOTIFY_LINEUP_DAY_BUCKET_SIZE;
+    const bucket = OSL_LINEUP_ARTISTS.slice(bucketStart, bucketStart + SPOTIFY_LINEUP_DAY_BUCKET_SIZE);
+    artists.push(...bucket.slice(0, Math.min(SPOTIFY_JAMES_BOND_ARTISTS_PER_DAY, bucket.length)));
+  }
+
+  return artists;
+};
+
+const buildJamesBondProfile = (): SpotifyProfile => {
+  const topArtists = buildJamesBondProfileArtists();
+  return {
+    handle: "@james_bond",
+    topArtists,
+    topGenres: OSL_GENRES.slice(0, SPOTIFY_TOP_GENRE_COUNT),
+    topTracks: topArtists.slice(0, SPOTIFY_TOP_ARTIST_COUNT).map((artist) => `${artist} live`),
+    source: "mockJamesBondSeed",
+  };
+};
+
+const isJamesBondProfileName = (displayName: string) => displayName.toLowerCase().trim() === "james bond";
+
 const buildFallbackSpotifyProfile = (displayName: string) => {
+  if (isJamesBondProfileName(displayName)) {
+    return buildJamesBondProfile();
+  }
+
   const normalizedName = displayName.toLowerCase().trim();
   const normalizedSeed = hashString(normalizedName);
   const rng = createSeededRng(normalizedSeed + 20260902);
