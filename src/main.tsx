@@ -89,6 +89,8 @@ type MatchingCard = {
   };
 };
 
+type AppPage = "plan" | "toolkit";
+
 type MatchConnectState = Set<string>;
 
 type SeedStatus = { users: number; intents: number; fallbackRows: number; seeded: boolean };
@@ -431,6 +433,7 @@ function PlanScreen({
   onConnect,
   connectingMatchIds,
   connectedMatchIds,
+  onOpenToolkit,
 }: {
   usingBackend: boolean;
   state: FormPlanState;
@@ -453,13 +456,17 @@ function PlanScreen({
   onConnect: (matchId: string) => void;
   connectingMatchIds: MatchConnectState;
   connectedMatchIds: MatchConnectState;
+  onOpenToolkit: () => void;
 }) {
   const now = parsePlanTime(state.planTime || "") || mockDataWindow.nowAnchor;
   const zoneLabel = zoneLabelMap[state.zone] ?? "North Gate";
 
   return (
     <main>
-      <header><p className="eyebrow">OUTSIDE LANDS · OSL TOGETHER</p></header>
+      <header className="app-header">
+        <p className="eyebrow">OUTSIDE LANDS · OSL TOGETHER</p>
+        <button className="ghost-btn" onClick={onOpenToolkit} type="button">Build toolkit</button>
+      </header>
       <h1 className="hero-title">Find your people on the way there.</h1>
       <p className="lede">A warm introduction to fans heading the same direction — with a transit fallback always in view.</p>
 
@@ -528,10 +535,160 @@ function buildDemoMatchesWithConnectionState(state: FormPlanState, now: number, 
   return buildMatchesFromDemo(state, now).filter((fan) => !connectedMatchIds.has(fan._id));
 }
 
+function BuildToolkitPage({ onBack }: { onBack: () => void }) {
+  const resources = [
+    {
+      section: "Outside LLMs",
+      title: "Builder Resources",
+      required: true,
+      items: [
+        {
+          label: "SITES · REQUIRED",
+          href: "https://learn.chatgpt.com/docs/sites",
+          note: "Build and publish with ChatGPT Sites",
+        },
+      ],
+    },
+    {
+      section: "OpenAI",
+      title: "AI BUILDING TOOLS",
+      required: false,
+      items: [
+        {
+          label: "START HERE",
+          href: "https://developers.openai.com/learn",
+          note: "Build with OpenAI APIs",
+        },
+        {
+          label: "DOCS · API · GUIDES",
+          href: "https://developers.openai.com/",
+          note: "Model APIs and integration docs",
+        },
+      ],
+    },
+    {
+      section: "JamBase",
+      title: "MUSIC DATASETS",
+      required: false,
+      items: [
+        {
+          label: "DATA · API",
+          href: "https://data.jambase.com/",
+          note: "Music metadata for FestFit discovery context",
+        },
+      ],
+    },
+    {
+      section: "Convex",
+      title: "BACKEND RESOURCES",
+      required: false,
+      items: [
+        {
+          label: "HACKATHON TOOLKIT",
+          href: "https://www.convex.dev/hackathons/resources",
+          note: "Convex backend architecture guidance",
+        },
+        {
+          label: "Convex Builder Resources",
+          href: "https://www.convex.dev/hackathons/resources",
+          note: "Same source for schema, queries, mutations, actions",
+        },
+      ],
+    },
+  ];
+
+  const flow = [
+    { icon: "🧭", stage: "Plan capture", detail: "User enters direction, target time, zone, and starting point in the React mobile form.", area: "Frontend" },
+    { icon: "🧠", stage: "Intent persistence", detail: "Convex creates user + intent rows (including Spotify profile signal), then computes urgency tier.", area: "Convex" },
+    { icon: "⚡", stage: "Live matching query", detail: "matchingFansForIntent reads compatible candidates with time overlap + group/startpoint + Spotify overlap scoring.", area: "Convex query" },
+    { icon: "📱", stage: "Match rendering", detail: "React re-renders the list in real time with nearby matches and compatibility rationale.", area: "Frontend" },
+    { icon: "🧭", stage: "Fallback always-on", detail: "Transit/carpool/Lime fallback panel shows alternatives while matches are found.", area: "Mock data + backend cache" },
+    { icon: "🤝", stage: "Intro connect", detail: "User taps Connect and Convex marks matched state while creating a lightweight match object.", area: "Convex" },
+  ];
+
+  return (
+    <main>
+      <header className="app-header">
+        <div>
+          <p className="eyebrow">OUTSIDE LLMs · OSL TOGETHER</p>
+          <h1 className="hero-title">Hackathon build toolkit</h1>
+        </div>
+        <button className="ghost-btn" onClick={onBack} type="button">← Back</button>
+      </header>
+      <p className="lede">What we used to ship this build + how matching data moves through the system.</p>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="kicker">01 · BUILDER RESOURCES</p>
+            <h2>Builder precedence stack</h2>
+          </div>
+        </div>
+        <p className="disclaimer">Builder order used for this run: Sites → OpenAI → JamBase → Convex.</p>
+        {resources.map((group) => (
+          <article className="resource-block" key={group.section}>
+            <small className={`resource-meta ${group.required ? "required" : ""}`}>
+              {group.section}
+              {group.required ? " · REQUIRED" : ""}
+            </small>
+            <b>{group.title}</b>
+            <ul className="resource-list">
+              {group.items.map((item) => (
+                <li key={`${group.section}-${item.label}`}>
+                  <a href={item.href} target="_blank" rel="noreferrer">{item.label}</a>
+                  {item.note ? <span> · {item.note}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </section>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="kicker">02 · FLOW CHART</p>
+            <h2>From intent to match</h2>
+          </div>
+        </div>
+        <div className="flow-chart">
+          {flow.map((step, index) => (
+            <div className="flow-step-wrap" key={step.stage}>
+              <article className="flow-step">
+                <span className="flow-icon" aria-hidden="true">{step.icon}</span>
+                <div>
+                  <div className="flow-stage">{step.stage}</div>
+                  <small>{step.detail}</small>
+                  <span className="tag flow-tag">{step.area}</span>
+                </div>
+              </article>
+              {index < flow.length - 1 ? <span className="flow-arrow" aria-hidden="true">▾</span> : null}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="kicker">03 · WHY THIS STACK</p>
+            <h2>Hackathon scoring note</h2>
+          </div>
+        </div>
+        <p className="success">$1000 — best use of Convex.</p>
+        <p className="disclaimer">
+          Convex drives the real-time compatibility model, scheduled tier updates, and lightweight onboarding-safe match creation for a resilient, demo-ready flow.
+        </p>
+      </section>
+    </main>
+  );
+}
+
 function MockApp() {
   const [state, setState] = useState<FormPlanState>(createDefaultPlanState);
   const [created, setCreated] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [page, setPage] = useState<AppPage>("plan");
   const [isSaving, setIsSaving] = useState(false);
   const [connectedMatchIds, setConnectedMatchIds] = useState<MatchConnectState>(new Set());
   const [connectingMatchIds, setConnectingMatchIds] = useState<MatchConnectState>(new Set());
@@ -591,6 +748,10 @@ function MockApp() {
     });
   };
 
+  if (page === "toolkit") {
+    return <BuildToolkitPage onBack={() => setPage("plan")} />;
+  }
+
   return (
     <PlanScreen
       usingBackend={false}
@@ -633,12 +794,13 @@ function MockApp() {
       seedStatus={undefined}
       onSeedNow={() => {}}
       isSeeding={false}
+      onOpenToolkit={() => setPage("toolkit")}
     />
   );
 }
 
 if (convexClient) {
-  function ConnectedApp() {
+function ConnectedApp() {
     const [state, setState] = useState<FormPlanState>(createDefaultPlanState);
     const [created, setCreated] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
@@ -647,6 +809,7 @@ if (convexClient) {
     const [saveError, setSaveError] = useState("");
     const [connectError, setConnectError] = useState("");
     const [isSeedingBackend, setIsSeedingBackend] = useState(false);
+    const [page, setPage] = useState<AppPage>("plan");
     const [didAutoSeedAttempted, setDidAutoSeedAttempted] = useState(false);
     const [connectedMatchIds, setConnectedMatchIds] = useState<MatchConnectState>(new Set());
     const [connectingMatchIds, setConnectingMatchIds] = useState<MatchConnectState>(new Set());
@@ -806,6 +969,10 @@ if (convexClient) {
       }
     };
 
+    if (page === "toolkit") {
+      return <BuildToolkitPage onBack={() => setPage("plan")} />;
+    }
+
     return (
       <PlanScreen
         usingBackend={true}
@@ -851,6 +1018,7 @@ if (convexClient) {
         seedStatus={seedStatus}
         onSeedNow={onSeedNow}
         isSeeding={isSeedingBackend}
+        onOpenToolkit={() => setPage("toolkit")}
       />
     );
 }

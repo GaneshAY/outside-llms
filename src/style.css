@@ -33,6 +33,18 @@ h1 { font-size: clamp(36px, 11vw, 64px); line-height: .98; margin: 30px 0 16px; 
 .hero-title { font-size: clamp(29px, 8.2vw, 50px); }
 h2 { margin: 3px 0 0; font-size: 24px; }
 .lede { font-size: 18px; color: #bbc0b2; margin: 0 0 28px; }
+.app-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+
+.ghost-btn {
+  border: 1px solid #617047;
+  border-radius: 999px;
+  padding: 7px 12px;
+  color: #d7ef65;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  font-size: 12px;
+}
 
 .card,
 .fallback { background: #22291f; border: 1px solid #3b4535; border-radius: 22px; padding: 20px; margin-top: 18px; }
@@ -145,6 +157,81 @@ input, select {
 .tag { white-space: nowrap; color: #bbc0b2; border-color: #53604d; }
 .disclaimer { color: #8f9988; font-size: 11px; display: block; margin-top: 12px; }
 .no-match { color: #a7ac9e; padding: 12px 0; border-top: 1px solid #3a4535; }
+
+.resource-list,
+.resource-list li {
+  margin: 0;
+  padding: 0;
+}
+
+.resource-block {
+  padding-top: 18px;
+  border-top: 1px solid #3a4535;
+  margin-top: 14px;
+}
+
+.resource-block b,
+.resource-block a { color: #f1f6e4; }
+
+.resource-list {
+  margin-top: 8px;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.resource-meta {
+  display: inline-block;
+  color: #8f9988;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.resource-meta.required {
+  color: #d7ef65;
+}
+
+.resource-list a { text-decoration: underline; }
+
+.flow-chart {
+  margin-top: 6px;
+  display: grid;
+  gap: 14px;
+}
+
+.flow-step-wrap {
+  display: grid;
+  justify-items: stretch;
+  gap: 14px;
+}
+
+.flow-step {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding-top: 14px;
+}
+
+.flow-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #354d61;
+  font-size: 17px;
+}
+
+.flow-stage { font-weight: 700; color: #f7f3ea; margin-bottom: 3px; }
+.flow-tag { margin-top: 8px; display: inline-flex; }
+.flow-arrow {
+  color: #d7ef65;
+  text-align: center;
+  font-size: 20px;
+  line-height: 1;
+}
 .connect-btn {
   border: 0;
   border-radius: 999px;
