@@ -443,7 +443,7 @@ function PlanScreen({
   return (
     <main>
       <header><p className="eyebrow">OUTSIDE LANDS · OSL TOGETHER</p></header>
-      <h1>Find your people on the way there.</h1>
+      <h1 className="hero-title">Find your people on the way there.</h1>
       <p className="lede">A warm introduction to fans heading the same direction — with a transit fallback always in view.</p>
 
       <FormSection
