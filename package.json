@@ -1,0 +1,7 @@
+{
+  "name": "osl-together",
+  "private": true,
+  "scripts": {"dev": "vite", "build": "tsc -b && vite build"},
+  "dependencies": {"@convex-dev/react":"latest","convex":"latest","react":"latest","react-dom":"latest","vite":"latest","typescript":"latest"},
+  "devDependencies": {"@types/react":"latest","@types/react-dom":"latest","@vitejs/plugin-react":"latest"}
+}
