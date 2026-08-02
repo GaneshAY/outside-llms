@@ -33,6 +33,27 @@ type LimeEvent = {
   seatedScooters: number;
 };
 
+type DemoIntent = {
+  id: string;
+  name: string;
+  direction: "arrival" | "departure";
+  desiredTime: number;
+  locationZone: MockZone;
+  flexibilityMinutes: number;
+  startingPoint?: string;
+  manualUrgentOverride: boolean;
+  tier: "week" | "day" | "hours" | "urgent";
+  groupId?: string;
+};
+
+type PlanForMatch = {
+  direction: "arrival" | "departure";
+  locationZone: MockZone;
+  desiredTime: number;
+  flexibilityMinutes: number;
+  startingPoint?: string;
+};
+
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
@@ -40,6 +61,62 @@ const FESTIVAL_START = Date.parse("2026-08-02T00:00:00-07:00");
 const FESTIVAL_END = Date.parse("2026-09-13T23:59:00-07:00");
 const DEMO_NOW = Date.parse("2026-08-02T12:00:00-07:00");
 const DAYS = Math.floor((FESTIVAL_END - FESTIVAL_START) / DAY_MS) + 1;
+const DEMO_SCHEDULE_HOURS = [7, 10, 14, 18] as const;
+const REAL_NAMES = [
+  "Avery Stone",
+  "Maya Collins",
+  "Jordan Kim",
+  "Noah Rivera",
+  "Priya Shah",
+  "Ethan Brooks",
+  "Lena Patel",
+  "Carlos Ruiz",
+  "Nina Torres",
+  "Oliver Hale",
+  "Sofia Morales",
+  "Kai Chen",
+  "Grace Kim",
+  "Daniel Ortiz",
+  "Arihant Mehta",
+  "Emma Brooks",
+  "Liam Carter",
+  "Isabella Ross",
+  "Noah Bennett",
+  "Ava Johnson",
+  "Lucas Nguyen",
+  "Mila Rossi",
+  "Eli Chen",
+  "Jasmine Patel",
+  "Mateo Diaz",
+  "Olivia Grant",
+  "Noah Santiago",
+  "Aria Bell",
+  "Leo Martinez",
+  "Sara Kim",
+  "Nora Whitman",
+  "Ibrahim Yusuf",
+  "Chloe Bennett",
+  "Owen Park",
+  "Ivy Brooks",
+  "Mina Delgado",
+  "Yousef Farah",
+  "Harper Quinn",
+  "Rafael Diaz",
+  "Zoe Carter",
+  "Amelia Foster",
+  "Ethan Wong",
+  "Santiago Cruz",
+  "Nadia Khan",
+  "Mia Sanders",
+  "Theo Morgan",
+  "Luca Bellini",
+  "Noel Thompson",
+  "Isobel Wright",
+  "Julian Price",
+  "Anika Bose",
+  "Seth Kim",
+  "Leila Garcia",
+] as const;
 
 const zoneRouteGrid: Record<MockZone, Array<{ route: string; name: string }>> = {
   north_gate: [
@@ -163,6 +240,75 @@ function generateLimeEvents() {
   return events.sort((a, b) => a.checkedAt - b.checkedAt);
 }
 
+const computeMockTier = (desiredTime: number, now = DEMO_NOW, manual = false) => {
+  if (manual || desiredTime - now < 30 * MINUTE_MS) return "urgent" as const;
+  if (desiredTime - now < 4 * 60 * MINUTE_MS) return "hours" as const;
+  if (desiredTime - now <= 48 * 60 * MINUTE_MS) return "day" as const;
+  return "week" as const;
+};
+
+function windowsOverlap(
+  a: { desiredTime: number; flexibilityMinutes: number },
+  b: { desiredTime: number; flexibilityMinutes: number },
+) {
+  const aStart = a.desiredTime - a.flexibilityMinutes * MINUTE_MS;
+  const aEnd = a.desiredTime + a.flexibilityMinutes * MINUTE_MS;
+  const bStart = b.desiredTime - b.flexibilityMinutes * MINUTE_MS;
+  const bEnd = b.desiredTime + b.flexibilityMinutes * MINUTE_MS;
+  return Math.max(aStart, bStart) <= Math.min(aEnd, bEnd);
+}
+
+function generateMockIntents() {
+  const zones = Object.keys(zoneRouteGrid) as MockZone[];
+  const groups = ["gg-hype", "sunset-circles", "stage-sharers", "carpool-buddies", undefined, undefined];
+  const startingPoints = [
+    "501 Folsom St, San Francisco, CA 94105",
+    "North Gate Station entry",
+    "Music Meadow gate",
+    "South Gate platform",
+    "Main lot near entrance",
+    "Lands End shuttle stop",
+    "Hellman Hollow stairway",
+    "Panhandle station stop",
+    "Transit garage A",
+  ];
+  const intents: DemoIntent[] = [];
+
+  for (let day = 0; day < DAYS; day++) {
+    const dayStart = FESTIVAL_START + day * DAY_MS;
+    for (const zone of zones) {
+      const zoneIndex = zones.indexOf(zone);
+      for (let slotIndex = 0; slotIndex < DEMO_SCHEDULE_HOURS.length; slotIndex++) {
+        const direction = (slotIndex % 2) === 0 ? "arrival" : "departure";
+        const jitter = ((slotIndex * 11 + day * 17 + zoneIndex * 7) % 30) * MINUTE_MS;
+        const desiredTime = Math.min(
+          FESTIVAL_END - 60_000,
+          dayStart + DEMO_SCHEDULE_HOURS[slotIndex] * HOUR_MS + jitter,
+        );
+        const i = intents.length;
+        const flexibilityMinutes = 35 + (slotIndex * 4 + zoneIndex * 2) % 20;
+        const manualUrgentOverride = i % 83 === 0;
+        intents.push({
+          id: `demo-intent-${i + 1}`,
+          name: REAL_NAMES[i % REAL_NAMES.length],
+          direction,
+          desiredTime,
+          locationZone: zone,
+          flexibilityMinutes,
+          startingPoint: startingPoints[i % startingPoints.length],
+          manualUrgentOverride,
+          tier: computeMockTier(desiredTime, FESTIVAL_START, manualUrgentOverride),
+          groupId: groups[i % groups.length],
+        });
+      }
+    }
+  }
+
+  return intents;
+}
+
+export const mockDemoIntents = generateMockIntents();
+
 export const mockTransitEvents = generateTransitEvents();
 export const mockCarpoolEvents = generateCarpoolEvents();
 export const mockLimeEvents = generateLimeEvents();
@@ -191,7 +337,7 @@ export const mockDataWindow = {
 } as const;
 
 export const mockMobility = {
-  updatedLabel: `Festival-ready mock feed: ${shortDate.format(new Date(FESTIVAL_START))} to ${shortDate.format(new Date(FESTIVAL_END))}`,
+  updatedLabel: `Festival-ready fallback feed: ${shortDate.format(new Date(FESTIVAL_START))} to ${shortDate.format(new Date(FESTIVAL_END))}`,
   transit: mockTransitEvents,
   carpool: mockCarpoolEvents,
   lime: mockLimeEvents,
@@ -201,15 +347,47 @@ export const mockDataStats = {
   transitEvents: mockTransitEvents.length,
   carpoolEvents: mockCarpoolEvents.length,
   limeEvents: mockLimeEvents.length,
+  mockIntentPoints: mockDemoIntents.length,
 } as const;
 
 export const mockDataNotes = {
   source:
     "GTFS-RT shape guidance from 511.org open-data transit catalog and SFMTA rider references; mocked locally for speed.",
-  transitStatus: "Estimated mock departures from now through OSL dates.",
-  micromobilityStatus: "Mocked Lime/vehicle availability for demo safety.",
+  transitStatus: "Estimated transit departures from now through OSL dates.",
+  micromobilityStatus: "Estimated Lime/vehicle availability for safety checks.",
   zonePolicy: "Fixed 5-8 zones for Golden Gate Park, fixed to app schema (optional strings only).",
 } as const;
+
+export const getCompatibleFansForPlan = (plan: PlanForMatch, limit = 8) => {
+  const normalizedPlanStart = plan.startingPoint?.trim().toLowerCase().replace(/\s+/g, " ");
+  const normalizedPlanStartNorm = normalizedPlanStart === "" ? undefined : normalizedPlanStart;
+  const candidates = mockDemoIntents
+    .filter((intent) => intent.direction === plan.direction)
+    .filter((intent) => intent.locationZone === plan.locationZone)
+    .filter((intent) => windowsOverlap(intent, plan))
+    .map((intent) => ({
+      ...intent,
+      deltaMinutes: Math.max(0, Math.round(Math.abs(intent.desiredTime - plan.desiredTime) / MINUTE_MS)),
+      sameStartingPoint: Boolean(normalizedPlanStartNorm && ((intent.startingPoint ?? "").trim().toLowerCase().replace(/\s+/g, " ") === normalizedPlanStartNorm)),
+      overlapMinutes: Math.round(
+        Math.min(
+          intent.desiredTime + intent.flexibilityMinutes * MINUTE_MS,
+          plan.desiredTime + plan.flexibilityMinutes * MINUTE_MS,
+        ) / MINUTE_MS -
+          Math.max(
+            intent.desiredTime - intent.flexibilityMinutes * MINUTE_MS,
+            plan.desiredTime - plan.flexibilityMinutes * MINUTE_MS,
+          ) / MINUTE_MS,
+      ),
+    }))
+    .sort((a, b) => {
+      if (a.sameStartingPoint !== b.sameStartingPoint) return a.sameStartingPoint ? -1 : 1;
+      return a.deltaMinutes - b.deltaMinutes;
+    })
+    .slice(0, limit);
+
+  return candidates;
+};
 
 export const getTransitFeedForZone = (zone: MockZone, atMs = DEMO_NOW) => {
   return mockTransitEvents

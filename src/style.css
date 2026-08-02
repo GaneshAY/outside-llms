@@ -55,6 +55,23 @@ input, select {
   min-height: 48px;
 }
 
+.plan-summary { margin: 4px 0 12px; display: grid; gap: 10px; }
+.summary-line { display: flex; justify-content: space-between; gap: 12px; color: #a7ac9e; font-size: 13px; }
+.summary-line span { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; color: #8f9988; }
+.summary-line strong { color: #f5f8ec; font-size: 15px; }
+.plan-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.edit-plan {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  color: #d7ef65;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
 .segmented { display: grid; grid-template-columns: 1fr 1fr; background: #182018; border-radius: 12px; padding: 4px; margin: 18px 0; }
 .segmented button { border: 0; border-radius: 9px; padding: 10px; background: transparent; color: #a7ac9e; font: inherit; font-size: 16px; }
 .segmented .selected { background: #394632; color: #fff; }
@@ -74,6 +91,27 @@ input, select {
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+.primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.seed-btn {
+  width: 100%;
+  border: 1px solid #d7ef65;
+  background: transparent;
+  color: #d7ef65;
+  border-radius: 12px;
+  padding: 13px 16px;
+  font: inherit;
+  font-weight: 700;
+  min-height: 48px;
+}
+
+.seed-btn:hover {
+  background: rgba(215, 239, 101, 0.12);
 }
 
 .ai-stars { font-size: 18px; letter-spacing: 1px; line-height: 1; }
@@ -101,9 +139,39 @@ input, select {
 .transit-icon { background: #354d61; }
 .car-icon { background: #604c35; }
 .bike-icon { background: #485b38; }
+.fan-icon { background: #4f5f47; }
 
 .tag { white-space: nowrap; color: #bbc0b2; border-color: #53604d; }
 .disclaimer { color: #8f9988; font-size: 11px; display: block; margin-top: 12px; }
+.no-match { color: #a7ac9e; padding: 12px 0; border-top: 1px solid #3a4535; }
+.connect-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 12px;
+  background: #d7ef65;
+  color: #182018;
+  font: inherit;
+  font-weight: 700;
+  font-size: 12px;
+  margin-left: auto;
+  min-height: 34px;
+  white-space: nowrap;
+}
+
+.connect-btn.connected {
+  background: #304030;
+  color: #d7ef65;
+  border: 1px solid #4b6350;
+}
+
+.connect-btn:disabled {
+  opacity: 0.78;
+  cursor: not-allowed;
+}
+
+.match-list article {
+  align-items: flex-start;
+}
 
 footer { color: #727b6d; font-size: 12px; text-align: center; margin-top: 28px; }
 footer span { color: #d7ef65; margin: 0 5px; }

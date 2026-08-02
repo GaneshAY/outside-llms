@@ -7,6 +7,8 @@ const DAY_MS = 24 * HOUR_MS;
 const FESTIVAL_START = Date.parse("2026-08-02T00:00:00-07:00");
 const FESTIVAL_END = Date.parse("2026-09-13T23:59:00-07:00");
 const DAY_COUNT = Math.floor((FESTIVAL_END - FESTIVAL_START) / DAY_MS) + 1;
+const CARPOOL_HOURS = [7, 10, 13, 16, 19, 22] as const;
+const LIME_HOURS = [6, 9, 11, 14, 17, 20] as const;
 
 const createRng = (seed: number) => {
   let value = seed >>> 0;
@@ -58,29 +60,31 @@ export const seedFallback = mutation({
       }
 
       for (const stopId of backupStops) {
-        const carpoolWait = 2 + Math.floor(rng() * 38);
-        const limeWait = 1 + Math.floor(rng() * 12);
-        await ctx.db.insert("transitFallbackCache", {
-          routeId: "CARPOOL_DEMO",
-          stopId,
-          nextArrivals: [
-            now + carpoolWait * MINUTE_MS,
-            now + (carpoolWait + 10) * MINUTE_MS,
-            now + (carpoolWait + 20) * MINUTE_MS,
-          ],
-          fetchedAt: now,
-        });
-        await ctx.db.insert("transitFallbackCache", {
-          routeId: "LIME_DEMO",
-          stopId,
-          nextArrivals: [
-            now + limeWait * MINUTE_MS,
-            now + (limeWait + 7) * MINUTE_MS,
-            now + (limeWait + 15) * MINUTE_MS,
-          ],
-          fetchedAt: now,
-        });
-        inserted += 2;
+        for (const hour of CARPOOL_HOURS) {
+          await ctx.db.insert("transitFallbackCache", {
+            routeId: "CARPOOL_DEMO",
+            stopId,
+            nextArrivals: [
+              dayStart + hour * HOUR_MS + Math.floor(rng() * 30) * MINUTE_MS,
+              dayStart + hour * HOUR_MS + 10 * MINUTE_MS + Math.floor(rng() * 30) * MINUTE_MS,
+              dayStart + hour * HOUR_MS + 20 * MINUTE_MS + Math.floor(rng() * 30) * MINUTE_MS,
+            ],
+            fetchedAt: now,
+          });
+        }
+        for (const hour of LIME_HOURS) {
+          await ctx.db.insert("transitFallbackCache", {
+            routeId: "LIME_DEMO",
+            stopId,
+            nextArrivals: [
+              dayStart + hour * HOUR_MS + Math.floor(rng() * 18) * MINUTE_MS,
+              dayStart + hour * HOUR_MS + 7 * MINUTE_MS + Math.floor(rng() * 18) * MINUTE_MS,
+              dayStart + hour * HOUR_MS + 15 * MINUTE_MS + Math.floor(rng() * 18) * MINUTE_MS,
+            ],
+            fetchedAt: now,
+          });
+        }
+        inserted += CARPOOL_HOURS.length + LIME_HOURS.length;
       }
     }
 
