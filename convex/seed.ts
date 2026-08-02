@@ -74,6 +74,67 @@ const REAL_NAMES = [
 const DIRECTIONS = ["arrival", "departure"] as const;
 const SCHEDULE_HOURS = [7, 10, 14, 18, 20] as const;
 const SCHEDULE_DUPLICATES = 2;
+const SPOTIFY_PROFILES = [
+  {
+    handle: "averybeat",
+    topArtists: ["Phoebe Bridgers", "Tame Impala", "Glass Animals", "The Strokes", "Alt-J"],
+    topGenres: ["indie rock", "dream pop", "alternative", "shoegaze"],
+    topTracks: ["Garden Song", "The Less I Know The Better", "Heat Waves", "Last Nite", "Breezeblocks"],
+  },
+  {
+    handle: "maya.live",
+    topArtists: ["Kendrick Lamar", "Anderson .Paak", "SZA", "Tyler, The Creator", "Frank Ocean"],
+    topGenres: ["hip hop", "neo soul", "conscious rap", "r&b"],
+    topTracks: ["HUMBLE.", "Come Home", "The Weekend", "Lover Is a Day", "Nights"],
+  },
+  {
+    handle: "jordan.sound",
+    topArtists: ["Disclosure", "Daft Punk", "Four Tet", "Bonobo", "Jamie xx"],
+    topGenres: ["electronic", "house", "ambient", "future bass"],
+    topTracks: ["Latch", "Get Lucky", "Cirrus", "Kong", "Loner"],
+  },
+  {
+    handle: "noahfestival",
+    topArtists: ["Kali Uchis", "Jorja Smith", "Hozier", "Alina Baraz", "Snoh Aalegra"],
+    topGenres: ["r&b", "alternative pop", "soul", "indie pop"],
+    topTracks: ["Telepatia", "Blue Lights", "Cherry Wine", "Electric", "I Choose Me"],
+  },
+  {
+    handle: "priya.vibe",
+    topArtists: ["FKA twigs", "Grimes", "Arca", "Janelle Monáe", "Arca"],
+    topGenres: ["experimental pop", "art pop", "electropop", "alt r&b"],
+    topTracks: ["Cellophane", "Kill V. Maim", "Pablo", "Q.U.E.E.N.", "Pride"],
+  },
+  {
+    handle: "ethan.stage",
+    topArtists: ["Tame Impala", "MGMT", "Vampire Weekend", "Glass Animals", "Foster the People"],
+    topGenres: ["indie rock", "psychedelic", "alternative", "synth-pop"],
+    topTracks: ["Let It Happen", "Electric Feel", "Cape Cod Kwassa Kwassa", "Heat Waves", "Pumped Up Kicks"],
+  },
+  {
+    handle: "lena.rock",
+    topArtists: ["HAIM", "Sharon Van Etten", "Fleetwood Mac", "Big Thief", "Phoebe Bridgers"],
+    topGenres: ["indie folk", "indie rock", "singer-songwriter", "folk rock"],
+    topTracks: ["The Steps", "Jupiter 4", "Everywhere at Once", "Masterpiece", "Kyoto"],
+  },
+  {
+    handle: "carlos.lofi",
+    topArtists: ["FKJ", "Kaytranada", "Tom Misch", "RÜFÜS DU SOL", "Låpsley"],
+    topGenres: ["chill", "electronica", "nu jazz", "lo-fi"],
+    topTracks: ["Lying Together", "10%", "It Runs Through Me", "Lose Control", "Nocturne"],
+  },
+];
+
+const getSpotifyProfileForIndex = (index: number) => {
+  const profile = SPOTIFY_PROFILES[index % SPOTIFY_PROFILES.length];
+  return {
+    handle: `@${profile.handle}`,
+    topArtists: profile.topArtists.slice(0, 5),
+    topGenres: profile.topGenres.slice(0, 5),
+    topTracks: profile.topTracks.slice(0, 5),
+    source: "mockFestivalSeed",
+  };
+};
 
 const isAfterFestival = (ms: number) => ms > FESTIVAL_END - 60_000;
 
@@ -98,7 +159,11 @@ export const seedSyntheticDemoIntents = mutation({
             const desired = baseTime + jitter;
             if (isAfterFestival(desired)) continue;
 
-            users.push(await ctx.db.insert("users", { displayName: REAL_NAMES[insertedIntents % REAL_NAMES.length], authType: "guest" }));
+            users.push(await ctx.db.insert("users", {
+              displayName: REAL_NAMES[insertedIntents % REAL_NAMES.length],
+              authType: "guest",
+              spotifyProfile: getSpotifyProfileForIndex(insertedIntents),
+            }));
             const flexibilityMinutes = 40 + (slotIndex * 5 + zoneIndex * 3) % 25;
             const manualUrgentOverride = createdCount % 83 === 0;
 
@@ -171,15 +236,31 @@ export const seedMockBackendData = mutation({
     const existingIntents = await ctx.db.query("transitIntents").collect();
     const existingUsers = await ctx.db.query("users").collect();
     const existingFallback = await ctx.db.query("transitFallbackCache").collect();
-    const needsLegacyNameRefresh = existingUsers.some((user) => isLegacyDisplayName(user.displayName));
+    const needsLegacyNameRefresh = existingUsers.some((user) => isLegacyDisplayName(user.displayName) || !user.spotifyProfile);
 
     if (!force && existingIntents.length >= 200 && existingUsers.length >= 200) {
       if (needsLegacyNameRefresh) {
         for (let i = 0; i < existingUsers.length; i++) {
           const user = existingUsers[i];
           const displayName = normalizeDisplayName(user.displayName, i);
+          const updates: {
+            displayName?: string;
+            spotifyProfile?: {
+              handle?: string;
+              topArtists?: string[];
+              topGenres?: string[];
+              topTracks?: string[];
+              source?: string;
+            };
+          } = {};
           if (displayName !== user.displayName) {
-            await ctx.db.patch(user._id, { displayName });
+            updates.displayName = displayName;
+          }
+          if (!user.spotifyProfile) {
+            updates.spotifyProfile = getSpotifyProfileForIndex(i);
+          }
+          if (Object.keys(updates).length > 0) {
+            await ctx.db.patch(user._id, updates);
           }
         }
         return {
@@ -221,7 +302,11 @@ export const seedMockBackendData = mutation({
                 ((slotIndex * 13 + zoneIndex * 7 + dayOffset * 3 + duplicate * 9) % 30) * MINUTE_MS;
               if (isAfterFestival(desiredTime)) continue;
 
-              const userId = await ctx.db.insert("users", { displayName: REAL_NAMES[insertedIntents % REAL_NAMES.length], authType: "guest" });
+              const userId = await ctx.db.insert("users", {
+                displayName: REAL_NAMES[insertedIntents % REAL_NAMES.length],
+                authType: "guest",
+                spotifyProfile: getSpotifyProfileForIndex(insertedIntents),
+              });
               const flexibilityMinutes = 40 + (slotIndex * 5 + zoneIndex * 3 + duplicate) % 25;
               const manualUrgentOverride = createdCount % 83 === 0;
 

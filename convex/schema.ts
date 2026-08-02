@@ -8,7 +8,18 @@ export const zoneLabels: Record<(typeof locationZones)[number], string> = {
 };
 
 export default defineSchema({
-  users: defineTable({ displayName: v.string(), authType: v.union(v.literal("spotify"), v.literal("quiz"), v.literal("guest")), contactHandle: v.optional(v.string()) }),
+  users: defineTable({
+    displayName: v.string(),
+    authType: v.union(v.literal("spotify"), v.literal("quiz"), v.literal("guest")),
+    contactHandle: v.optional(v.string()),
+    spotifyProfile: v.optional(v.object({
+      handle: v.optional(v.string()),
+      topArtists: v.optional(v.array(v.string())),
+      topGenres: v.optional(v.array(v.string())),
+      topTracks: v.optional(v.array(v.string())),
+      source: v.optional(v.string()),
+    })),
+  }),
   transitIntents: defineTable({
     userId: v.id("users"), direction: v.union(v.literal("arrival"), v.literal("departure")), desiredTime: v.number(), locationZone: v.string(), flexibilityMinutes: v.number(), tier: v.union(v.literal("week"), v.literal("day"), v.literal("hours"), v.literal("urgent")), manualUrgentOverride: v.boolean(), status: v.union(v.literal("pending"), v.literal("matched"), v.literal("expired")), sourceItineraryId: v.optional(v.string()), groupId: v.optional(v.string()),
     // Placeholder-only user context for carpool/transit matching UX; not yet normalized.

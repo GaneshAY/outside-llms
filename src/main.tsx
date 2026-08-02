@@ -81,6 +81,12 @@ type MatchingCard = {
   sameGroup: boolean;
   sameStartingPoint: boolean;
   startingPoint?: string;
+  spotifyMatch?: {
+    overlapArtists: string[];
+    overlapGenres: string[];
+    score: number;
+    label: "music match" | "strong music match" | "no music match";
+  };
 };
 
 type MatchConnectState = Set<string>;
@@ -276,6 +282,7 @@ function MatchingList({
         {matches.map((fan) => {
           const tag = fan.sameGroup ? "group match"
             : fan.sameStartingPoint ? "same start"
+              : fan.spotifyMatch?.score && fan.spotifyMatch.score >= 25 ? "music fit"
               : fan.overlapMinutes >= 30 ? "great fit"
                 : "good fit";
           const origin = fan.startingPoint?.trim();
@@ -291,6 +298,16 @@ function MatchingList({
                 <small>
                   Overlap window: ±{fan.flexibilityMinutes} min {origin ? `· from ${origin}` : ""}
                 </small>
+                {fan.spotifyMatch && fan.spotifyMatch.score > 0 && (
+                  <small>
+                    🎶 Spotify: {fan.spotifyMatch.label}
+                    {fan.spotifyMatch.overlapArtists.length > 0
+                      ? ` · shared artists: ${fan.spotifyMatch.overlapArtists.slice(0, 2).join(", ")}`
+                      : fan.spotifyMatch.overlapGenres.length > 0
+                        ? ` · shared genres: ${fan.spotifyMatch.overlapGenres.slice(0, 2).join(", ")}`
+                        : ""}
+                  </small>
+                )}
               </div>
               <span className="tag">{tag}</span>
               <button

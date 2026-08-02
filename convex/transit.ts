@@ -1,6 +1,14 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+const SPOTIFY_PROFILE_ARG = v.optional(v.object({
+  handle: v.optional(v.string()),
+  topArtists: v.optional(v.array(v.string())),
+  topGenres: v.optional(v.array(v.string())),
+  topTracks: v.optional(v.array(v.string())),
+  source: v.optional(v.string()),
+}));
+
 export function computeTier(desiredTime: number, now = Date.now(), manual = false) {
   if (manual || desiredTime - now < 30 * 60_000) return "urgent" as const;
   if (desiredTime - now < 4 * 60 * 60_000) return "hours" as const;
@@ -12,6 +20,53 @@ export function compatible(a: {direction:string; desiredTime:number; flexibility
   return a.direction === b.direction && a.locationZone === b.locationZone &&
     Math.max(a.desiredTime - a.flexibilityMinutes * 60_000, b.desiredTime - b.flexibilityMinutes * 60_000) <=
     Math.min(a.desiredTime + a.flexibilityMinutes * 60_000, b.desiredTime + b.flexibilityMinutes * 60_000);
+}
+
+type SpotifyProfile = {
+  handle?: string;
+  topArtists?: string[];
+  topGenres?: string[];
+  topTracks?: string[];
+  source?: string;
+};
+
+type SpotifyMatchSignal = {
+  overlapArtists: string[];
+  overlapGenres: string[];
+  score: number;
+  label: "music match" | "strong music match" | "no music match";
+};
+
+const normalizeSpotifyList = (values?: string[] | null) => {
+  if (!Array.isArray(values)) return [];
+  return values
+    .map((item) => item?.toLowerCase().trim())
+    .filter(Boolean);
+};
+
+function computeSpotifyMatch(currentProfile?: SpotifyProfile | null, candidateProfile?: SpotifyProfile | null): SpotifyMatchSignal {
+  const currentArtists = normalizeSpotifyList(currentProfile?.topArtists);
+  const candidateArtists = normalizeSpotifyList(candidateProfile?.topArtists);
+  const currentGenres = normalizeSpotifyList(currentProfile?.topGenres);
+  const candidateGenres = normalizeSpotifyList(candidateProfile?.topGenres);
+
+  if (currentArtists.length === 0 || candidateArtists.length === 0) {
+    return { overlapArtists: [], overlapGenres: [], score: 0, label: "no music match" };
+  }
+
+  const overlapArtists = currentArtists.filter((artist) => candidateArtists.includes(artist));
+  const overlapGenres = currentGenres.filter((genre) => candidateGenres.includes(genre));
+  const score = Math.min(100, overlapArtists.length * 22 + overlapGenres.length * 8);
+
+  const hasStrongArtistOverlap = overlapArtists.length >= 2;
+  const hasSomeOverlap = overlapArtists.length >= 1 || overlapGenres.length >= 1;
+
+  return {
+    overlapArtists,
+    overlapGenres,
+    score,
+    label: hasStrongArtistOverlap ? "strong music match" : hasSomeOverlap ? "music match" : "no music match",
+  };
 }
 
 const FAN_NAME_FALLBACKS = [
@@ -70,6 +125,36 @@ const FAN_NAME_FALLBACKS = [
   "Leila Garcia",
 ];
 
+const SPOTIFY_FALLBACK_PROFILES = [
+  { handle: "outside_vibes", topArtists: ["tame impala", "phoebe bridgers"], topGenres: ["indie rock", "dream pop"] },
+  { handle: "beat_drop", topArtists: ["kali uchis", "sza"], topGenres: ["r&b", "soul"] },
+  { handle: "the-late-night", topArtists: ["daft punk", "bonobo"], topGenres: ["electronic", "ambient"] },
+  { handle: "open-mic", topArtists: ["tyler, the creator", "kendrick lamar"], topGenres: ["hip hop", "r&b"] },
+  { handle: "stage-dreams", topArtists: ["glass animals", "vampire weekend"], topGenres: ["indie rock", "alternative"] },
+  { handle: "sunsetset", topArtists: ["haim", "alt-j"], topGenres: ["indie pop", "alternative"] },
+  { handle: "city-loop", topArtists: ["fkj", "kaytranada"], topGenres: ["lo-fi", "electronica"] },
+];
+
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+};
+
+const buildFallbackSpotifyProfile = (displayName: string) => {
+  const normalizedName = displayName.toLowerCase().trim();
+  const source = SPOTIFY_FALLBACK_PROFILES[hashString(normalizedName) % SPOTIFY_FALLBACK_PROFILES.length];
+  return {
+    handle: `@${source.handle}`,
+    topArtists: source.topArtists.slice(0, 5),
+    topGenres: source.topGenres.slice(0, 5),
+    topTracks: [],
+    source: "nameFallback",
+  };
+};
+
 const isLegacyDisplayName = (value: string | undefined | null) => {
   const trimmed = (value ?? "").trim().toLowerCase();
   return trimmed === "" || trimmed === "outside lander" || /^demo fan/.test(trimmed) || /^guest fan/.test(trimmed);
@@ -92,7 +177,13 @@ function normalizeStartingPoint(value?: string) {
   return normalized === "" ? undefined : normalized;
 }
 
-export const createGuest = mutation({ args: { displayName: v.string() }, handler: async (ctx, args) => ctx.db.insert("users", { displayName: args.displayName, authType: "guest" }) });
+export const createGuest = mutation({
+  args: { displayName: v.string(), spotifyProfile: SPOTIFY_PROFILE_ARG },
+  handler: async (ctx, args) => {
+    const spotifyProfile = args.spotifyProfile ?? buildFallbackSpotifyProfile(args.displayName);
+    return ctx.db.insert("users", { displayName: args.displayName, authType: "guest", spotifyProfile });
+  },
+});
 export const createIntent = mutation({ args: { userId: v.id("users"), direction: v.union(v.literal("arrival"), v.literal("departure")), desiredTime: v.number(), locationZone: v.string(), flexibilityMinutes: v.number(), sourceItineraryId: v.optional(v.string()), groupId: v.optional(v.string()), startingPoint: v.optional(v.string()) }, handler: async (ctx, args) => ctx.db.insert("transitIntents", { ...args, tier: computeTier(args.desiredTime), manualUrgentOverride: false, status: "pending" }) });
 export const createPlanWithGuest = mutation({
   args: {
@@ -104,9 +195,15 @@ export const createPlanWithGuest = mutation({
     sourceItineraryId: v.optional(v.string()),
     groupId: v.optional(v.string()),
     startingPoint: v.optional(v.string()),
+    spotifyProfile: SPOTIFY_PROFILE_ARG,
   },
   handler: async (ctx, args) => {
-    const userId = await ctx.db.insert("users", { displayName: args.displayName, authType: "guest" });
+    const spotifyProfile = args.spotifyProfile ?? buildFallbackSpotifyProfile(args.displayName);
+    const userId = await ctx.db.insert("users", {
+      displayName: args.displayName,
+      authType: "guest",
+      spotifyProfile,
+    });
     const intentId = await ctx.db.insert("transitIntents", {
       userId,
       direction: args.direction,
@@ -141,6 +238,9 @@ export const matchingFansForIntent = query({
     const current = await ctx.db.get(args.intentId);
     if (!current) return [];
 
+    const currentUser = current.userId ? await ctx.db.get(current.userId) : null;
+    const currentSpotifyProfile = (currentUser?.spotifyProfile as SpotifyProfile | undefined) ?? null;
+
     const allCandidates = await ctx.db.query("transitIntents").withIndex("by_status_direction_tier", (q) =>
       q.eq("status", "pending").eq("direction", current.direction),
     ).collect();
@@ -154,6 +254,7 @@ export const matchingFansForIntent = query({
 
     const withNames = await Promise.all(filtered.map(async (candidate) => {
       const user = candidate.userId ? await ctx.db.get(candidate.userId) : null;
+      const spotifyMatch = computeSpotifyMatch(currentSpotifyProfile, (user?.spotifyProfile as SpotifyProfile | undefined) ?? null);
       const userName = fallbackFanName(candidate._id, user?.displayName);
       const deltaMinutes = Math.max(0, Math.round(Math.abs(candidate.desiredTime - current.desiredTime) / 60_000));
       const overlap = overlapMinutes(current, candidate);
@@ -171,6 +272,7 @@ export const matchingFansForIntent = query({
         overlapMinutes: Math.max(0, Math.round(overlap / 60_000)),
         sameStartingPoint,
         sameGroup: Boolean(current.groupId && candidate.groupId && current.groupId === candidate.groupId),
+        spotifyMatch,
       };
     }));
 
@@ -178,6 +280,7 @@ export const matchingFansForIntent = query({
       .sort((a, b) => {
         if (a.sameGroup !== b.sameGroup) return a.sameGroup ? -1 : 1;
         if (a.sameStartingPoint !== b.sameStartingPoint) return a.sameStartingPoint ? -1 : 1;
+        if (a.spotifyMatch.score !== b.spotifyMatch.score) return b.spotifyMatch.score - a.spotifyMatch.score;
         if (a.deltaMinutes !== b.deltaMinutes) return a.deltaMinutes - b.deltaMinutes;
         return b.overlapMinutes - a.overlapMinutes;
       })
