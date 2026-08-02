@@ -538,7 +538,7 @@ function buildDemoMatchesWithConnectionState(state: FormPlanState, now: number, 
 function BuildToolkitPage({ onBack }: { onBack: () => void }) {
   const resources = [
     {
-      section: "Outside LLMs",
+      section: "Outside LLMs · REQUIRED",
       title: "Builder Resources",
       required: true,
       items: [
@@ -629,9 +629,8 @@ function BuildToolkitPage({ onBack }: { onBack: () => void }) {
           <article className="resource-block" key={group.section}>
             <small className={`resource-meta ${group.required ? "required" : ""}`}>
               {group.section}
-              {group.required ? " · REQUIRED" : ""}
             </small>
-            <b>{group.title}</b>
+            <b className="resource-title">{group.title}</b>
             <ul className="resource-list">
               {group.items.map((item) => (
                 <li key={`${group.section}-${item.label}`}>
