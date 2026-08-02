@@ -540,6 +540,7 @@ function BuildToolkitPage({ onBack }: { onBack: () => void }) {
     {
       section: "Outside LLMs · REQUIRED",
       title: "Builder Resources",
+      why: "Required",
       required: true,
       items: [
         {
@@ -552,46 +553,49 @@ function BuildToolkitPage({ onBack }: { onBack: () => void }) {
     {
       section: "OpenAI",
       title: "AI BUILDING TOOLS",
+      why: "Build",
       required: false,
       items: [
         {
           label: "START HERE",
           href: "https://developers.openai.com/learn",
-          note: "Build with OpenAI APIs",
+          note: "Build",
         },
         {
           label: "DOCS · API · GUIDES",
           href: "https://developers.openai.com/",
-          note: "Model APIs and integration docs",
+          note: "Docs",
         },
       ],
     },
     {
       section: "JamBase",
       title: "MUSIC DATASETS",
+      why: "Data",
       required: false,
       items: [
         {
           label: "DATA · API",
           href: "https://data.jambase.com/",
-          note: "Music metadata for FestFit discovery context",
+          note: "Music",
         },
       ],
     },
     {
       section: "Convex",
       title: "BACKEND RESOURCES",
+      why: "Backend",
       required: false,
       items: [
         {
           label: "HACKATHON TOOLKIT",
           href: "https://www.convex.dev/hackathons/resources",
-          note: "Convex backend architecture guidance",
+          note: "Backend",
         },
         {
           label: "Convex Builder Resources",
           href: "https://www.convex.dev/hackathons/resources",
-          note: "Same source for schema, queries, mutations, actions",
+          note: "Backend",
         },
       ],
     },
@@ -620,22 +624,19 @@ function BuildToolkitPage({ onBack }: { onBack: () => void }) {
       <section className="card">
         <div className="section-heading">
           <div>
-            <p className="kicker">01 · BUILDER RESOURCES</p>
-            <h2>Builder precedence stack</h2>
+            <h2>Builder resources</h2>
           </div>
         </div>
         <p className="disclaimer">Builder order used for this run: Sites → OpenAI → JamBase → Convex.</p>
         {resources.map((group) => (
           <article className="resource-block" key={group.section}>
-            <small className={`resource-meta ${group.required ? "required" : ""}`}>
-              {group.section}
-            </small>
-            <b className="resource-title">{group.title}</b>
+            <h3 className={`resource-name ${group.required ? "resource-required" : ""}`}>{group.section}</h3>
+            <p className="resource-why">{group.why}</p>
             <ul className="resource-list">
               {group.items.map((item) => (
                 <li key={`${group.section}-${item.label}`}>
                   <a href={item.href} target="_blank" rel="noreferrer">{item.label}</a>
-                  {item.note ? <span> · {item.note}</span> : null}
+                  {item.note ? <span className="resource-note"> · {item.note}</span> : null}
                 </li>
               ))}
             </ul>
@@ -667,18 +668,6 @@ function BuildToolkitPage({ onBack }: { onBack: () => void }) {
         </div>
       </section>
 
-      <section className="card">
-        <div className="section-heading">
-          <div>
-            <p className="kicker">03 · WHY THIS STACK</p>
-            <h2>Hackathon scoring note</h2>
-          </div>
-        </div>
-        <p className="success">$1000 — best use of Convex.</p>
-        <p className="disclaimer">
-          Convex drives the real-time compatibility model, scheduled tier updates, and lightweight onboarding-safe match creation for a resilient, demo-ready flow.
-        </p>
-      </section>
     </main>
   );
 }

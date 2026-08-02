@@ -170,26 +170,39 @@ input, select {
   margin-top: 14px;
 }
 
+.resource-name {
+  margin: 0;
+  color: #f7f3ea;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.resource-required {
+  color: #d7ef65;
+}
+
+.resource-why {
+  margin: 4px 0 10px;
+  color: #f1f6e4;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
 .resource-block b,
 .resource-block a { color: #f1f6e4; }
+
+.resource-note {
+  color: #bbc0b2;
+  font-size: 12px;
+}
 
 .resource-list {
   margin-top: 8px;
   list-style: none;
   display: grid;
   gap: 8px;
-}
-
-.resource-meta {
-  display: inline-block;
-  color: #8f9988;
-  font-size: 11px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
-.resource-meta.required {
-  color: #d7ef65;
 }
 
 .resource-list a { text-decoration: underline; }
