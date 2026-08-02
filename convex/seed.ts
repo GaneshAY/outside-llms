@@ -74,64 +74,173 @@ const REAL_NAMES = [
 const DIRECTIONS = ["arrival", "departure"] as const;
 const SCHEDULE_HOURS = [7, 10, 14, 18, 20] as const;
 const SCHEDULE_DUPLICATES = 2;
-const SPOTIFY_PROFILES = [
-  {
-    handle: "averybeat",
-    topArtists: ["Phoebe Bridgers", "Tame Impala", "Glass Animals", "The Strokes", "Alt-J"],
-    topGenres: ["indie rock", "dream pop", "alternative", "shoegaze"],
-    topTracks: ["Garden Song", "The Less I Know The Better", "Heat Waves", "Last Nite", "Breezeblocks"],
-  },
-  {
-    handle: "maya.live",
-    topArtists: ["Kendrick Lamar", "Anderson .Paak", "SZA", "Tyler, The Creator", "Frank Ocean"],
-    topGenres: ["hip hop", "neo soul", "conscious rap", "r&b"],
-    topTracks: ["HUMBLE.", "Come Home", "The Weekend", "Lover Is a Day", "Nights"],
-  },
-  {
-    handle: "jordan.sound",
-    topArtists: ["Disclosure", "Daft Punk", "Four Tet", "Bonobo", "Jamie xx"],
-    topGenres: ["electronic", "house", "ambient", "future bass"],
-    topTracks: ["Latch", "Get Lucky", "Cirrus", "Kong", "Loner"],
-  },
-  {
-    handle: "noahfestival",
-    topArtists: ["Kali Uchis", "Jorja Smith", "Hozier", "Alina Baraz", "Snoh Aalegra"],
-    topGenres: ["r&b", "alternative pop", "soul", "indie pop"],
-    topTracks: ["Telepatia", "Blue Lights", "Cherry Wine", "Electric", "I Choose Me"],
-  },
-  {
-    handle: "priya.vibe",
-    topArtists: ["FKA twigs", "Grimes", "Arca", "Janelle Monáe", "Arca"],
-    topGenres: ["experimental pop", "art pop", "electropop", "alt r&b"],
-    topTracks: ["Cellophane", "Kill V. Maim", "Pablo", "Q.U.E.E.N.", "Pride"],
-  },
-  {
-    handle: "ethan.stage",
-    topArtists: ["Tame Impala", "MGMT", "Vampire Weekend", "Glass Animals", "Foster the People"],
-    topGenres: ["indie rock", "psychedelic", "alternative", "synth-pop"],
-    topTracks: ["Let It Happen", "Electric Feel", "Cape Cod Kwassa Kwassa", "Heat Waves", "Pumped Up Kicks"],
-  },
-  {
-    handle: "lena.rock",
-    topArtists: ["HAIM", "Sharon Van Etten", "Fleetwood Mac", "Big Thief", "Phoebe Bridgers"],
-    topGenres: ["indie folk", "indie rock", "singer-songwriter", "folk rock"],
-    topTracks: ["The Steps", "Jupiter 4", "Everywhere at Once", "Masterpiece", "Kyoto"],
-  },
-  {
-    handle: "carlos.lofi",
-    topArtists: ["FKJ", "Kaytranada", "Tom Misch", "RÜFÜS DU SOL", "Låpsley"],
-    topGenres: ["chill", "electronica", "nu jazz", "lo-fi"],
-    topTracks: ["Lying Together", "10%", "It Runs Through Me", "Lose Control", "Nocturne"],
-  },
+const OSL_LINEUP_ARTISTS = [
+  "Charli XCX",
+  "RÜFÜS DU SOL",
+  "The Strokes",
+  "The xx",
+  "Baby Keem",
+  "Turnstile",
+  "Subtronics",
+  "GRiZ",
+  "Djo",
+  "Labrinth",
+  "Empire Of The Sun",
+  "PinkPantheress",
+  "Dijon",
+  "Disco Lines",
+  "Death Cab for Cutie",
+  "GloRilla",
+  "Ethel Cain",
+  "Geese",
+  "Mariah the Scientist",
+  "Modest Mouse",
+  "Not for Radio",
+  "Clipse",
+  "Lucy Dacus",
+  "Wet Leg",
+  "it's murph",
+  "Sierra Ferrell",
+  "Malcolm Todd",
+  "Lane 8",
+  "Snow Strippers",
+  "Boris Brejcha",
+  "Odd Mob",
+  "OMNOM",
+  "Tinashe",
+  "Audrey Hobert",
+  "Ben Böhmer",
+  "JADE",
+  "The Temper Trap",
+  "The Story So Far",
+  "kwn",
+  "¥ØU$UK€ ¥UK1MAT$U",
+  "KI/KI",
+  "DJ Trixie Mattel",
+  "Łaszewo",
+  "Sienna Spiro",
+  "DESTIN CONRAD",
+  "Boys Noize",
+  "Durand Bernarr",
+  "Kingfishr",
+  "ALLEYCVT",
+  "Balu Brigada",
+  "Sultan + Shepard",
+  "Frost Children",
+  "Miss Monique",
+  "Die Spitz",
+  "Carlita",
+  "MPH",
+  "Silvana Estrada",
+  "Momma",
+  "Dylan Brady",
+  "Goldie Boutilier",
+  "Haute & Freddy",
+  "Grace Ives",
+  "Kerala Dust",
+  "tobiahs",
+  "Wunderhorse",
+  "Amble",
+  "Sports",
+  "Yard Act",
+  "Faouzia",
+  "Infinity Song",
+  "Billie Marten",
+  "Marlon Funaki",
+  "SF Gay Men's Chorus",
+  "camoufly",
+  "Night Tapes",
+  "Bandalos Chinos",
+  "X CLUB.",
+  "Luke Alessi",
+  "After",
+  "Bad Nerves",
+  "Chezile",
+  "RIO KOSTA",
+  "sosocamo",
+  "Automatic",
+  "Sawyer Hill",
+  "1-800 GIRLS",
+  "NEZZA",
+  "Magnus Ferrell",
+  "Red Leather",
+  "Racing Mount Pleasant",
+  "Day We Ran",
+  "Ally Evenson",
+  "Etari",
+  "Britton",
+  "Cruz Beckham",
+  "RYMAN",
+  "Dani Satin and Always Hallways",
+  "Vertigo",
+  "bad juuju",
 ];
 
-const getSpotifyProfileForIndex = (index: number) => {
-  const profile = SPOTIFY_PROFILES[index % SPOTIFY_PROFILES.length];
+const OSL_GENRES = [
+  "indie rock",
+  "electronic",
+  "hip hop",
+  "r&b",
+  "house",
+  "indie pop",
+  "alt rock",
+  "synth pop",
+  "folk rock",
+  "punk",
+  "dance",
+  "ambient",
+  "chill",
+  "experimental",
+  "electropop",
+  "soul",
+  "psychedelic",
+];
+
+const SPOTIFY_TOP_ARTIST_COUNT = 10;
+const SPOTIFY_TOP_GENRE_COUNT = 4;
+
+const createSeededRng = (seed: number) => {
+  let value = seed >>> 0;
+  return () => {
+    value = (value * 1664525 + 1013904223) >>> 0;
+    return value / 4294967296;
+  };
+};
+
+const pickUnique = (input: string[], count: number, rng: () => number) => {
+  const pool = [...input];
+  const result: string[] = [];
+
+  while (result.length < count && pool.length > 0) {
+    const idx = Math.floor(rng() * pool.length);
+    result.push(pool.splice(idx, 1)[0]);
+  }
+
+  return result;
+};
+
+const normalizeDayIndex = (dayOffset: number) => {
+  const bucketSize = 8;
+  const buckets = Math.max(1, Math.ceil(OSL_LINEUP_ARTISTS.length / bucketSize));
+  const safe = ((dayOffset % buckets) + buckets) % buckets;
+  return safe;
+};
+
+const getSpotifyProfileForIndex = (index: number, dayOffset = 0) => {
+  const profileSeed = 20260902 + index * 97 + Math.max(0, dayOffset) * 31;
+  const rng = createSeededRng(profileSeed);
+  const bucketSize = 8;
+  const bucketStart = normalizeDayIndex(dayOffset) * bucketSize;
+  const dayBucket = OSL_LINEUP_ARTISTS.slice(bucketStart, bucketStart + bucketSize);
+  const sharedArtists = pickUnique(dayBucket, Math.min(3, SPOTIFY_TOP_ARTIST_COUNT), rng);
+  const remainingPool = OSL_LINEUP_ARTISTS.filter((artist) => !sharedArtists.includes(artist));
+  const fillerArtists = pickUnique(remainingPool, SPOTIFY_TOP_ARTIST_COUNT - sharedArtists.length, rng);
+
   return {
-    handle: `@${profile.handle}`,
-    topArtists: profile.topArtists.slice(0, 5),
-    topGenres: profile.topGenres.slice(0, 5),
-    topTracks: profile.topTracks.slice(0, 5),
+    handle: `@osl_fan_${String(index + 1).padStart(4, "0")}`,
+    topArtists: [...sharedArtists, ...fillerArtists],
+    topGenres: pickUnique(OSL_GENRES, SPOTIFY_TOP_GENRE_COUNT, rng),
+    topTracks: [...sharedArtists, ...fillerArtists].slice(0, SPOTIFY_TOP_ARTIST_COUNT).map((artist) => `${artist} highlight`),
     source: "mockFestivalSeed",
   };
 };
@@ -162,7 +271,7 @@ export const seedSyntheticDemoIntents = mutation({
             users.push(await ctx.db.insert("users", {
               displayName: REAL_NAMES[insertedIntents % REAL_NAMES.length],
               authType: "guest",
-              spotifyProfile: getSpotifyProfileForIndex(insertedIntents),
+              spotifyProfile: getSpotifyProfileForIndex(insertedIntents, dayOffset),
             }));
             const flexibilityMinutes = 40 + (slotIndex * 5 + zoneIndex * 3) % 25;
             const manualUrgentOverride = createdCount % 83 === 0;
@@ -305,7 +414,7 @@ export const seedMockBackendData = mutation({
               const userId = await ctx.db.insert("users", {
                 displayName: REAL_NAMES[insertedIntents % REAL_NAMES.length],
                 authType: "guest",
-                spotifyProfile: getSpotifyProfileForIndex(insertedIntents),
+                spotifyProfile: getSpotifyProfileForIndex(insertedIntents, dayOffset),
               });
               const flexibilityMinutes = 40 + (slotIndex * 5 + zoneIndex * 3 + duplicate) % 25;
               const manualUrgentOverride = createdCount % 83 === 0;

@@ -304,6 +304,12 @@ function MatchingList({
                   <small>
                     🎶 Spotify: {fan.spotifyMatch.label}
                     {fan.spotifyMatch.overlapArtists.length > 0
+                      ? ` · ${fan.spotifyMatch.overlapArtists.length} shared artists`
+                      : fan.spotifyMatch.overlapGenres.length > 0
+                        ? ` · ${fan.spotifyMatch.overlapGenres.length} shared genres`
+                        : ""
+                    }
+                    {fan.spotifyMatch.overlapArtists.length > 0
                       ? ` · shared artists: ${fan.spotifyMatch.overlapArtists.slice(0, 2).join(", ")}`
                       : fan.spotifyMatch.overlapGenres.length > 0
                         ? ` · shared genres: ${fan.spotifyMatch.overlapGenres.slice(0, 2).join(", ")}`

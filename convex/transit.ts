@@ -125,15 +125,170 @@ const FAN_NAME_FALLBACKS = [
   "Leila Garcia",
 ];
 
-const SPOTIFY_FALLBACK_PROFILES = [
-  { handle: "outside_vibes", topArtists: ["tame impala", "phoebe bridgers"], topGenres: ["indie rock", "dream pop"] },
-  { handle: "beat_drop", topArtists: ["kali uchis", "sza"], topGenres: ["r&b", "soul"] },
-  { handle: "the-late-night", topArtists: ["daft punk", "bonobo"], topGenres: ["electronic", "ambient"] },
-  { handle: "open-mic", topArtists: ["tyler, the creator", "kendrick lamar"], topGenres: ["hip hop", "r&b"] },
-  { handle: "stage-dreams", topArtists: ["glass animals", "vampire weekend"], topGenres: ["indie rock", "alternative"] },
-  { handle: "sunsetset", topArtists: ["haim", "alt-j"], topGenres: ["indie pop", "alternative"] },
-  { handle: "city-loop", topArtists: ["fkj", "kaytranada"], topGenres: ["lo-fi", "electronica"] },
+const OSL_LINEUP_ARTISTS = [
+  "Charli XCX",
+  "RÜFÜS DU SOL",
+  "The Strokes",
+  "The xx",
+  "Baby Keem",
+  "Turnstile",
+  "Subtronics",
+  "GRiZ",
+  "Djo",
+  "Labrinth",
+  "Empire Of The Sun",
+  "PinkPantheress",
+  "Dijon",
+  "Disco Lines",
+  "Death Cab for Cutie",
+  "GloRilla",
+  "Ethel Cain",
+  "Geese",
+  "Mariah the Scientist",
+  "Modest Mouse",
+  "Not for Radio",
+  "Clipse",
+  "Lucy Dacus",
+  "Wet Leg",
+  "it's murph",
+  "Sierra Ferrell",
+  "Malcolm Todd",
+  "Lane 8",
+  "Snow Strippers",
+  "Boris Brejcha",
+  "Odd Mob",
+  "OMNOM",
+  "Tinashe",
+  "Audrey Hobert",
+  "Ben Böhmer",
+  "JADE",
+  "The Temper Trap",
+  "The Story So Far",
+  "kwn",
+  "¥ØU$UK€ ¥UK1MAT$U",
+  "KI/KI",
+  "DJ Trixie Mattel",
+  "Łaszewo",
+  "Sienna Spiro",
+  "DESTIN CONRAD",
+  "Boys Noize",
+  "Durand Bernarr",
+  "Kingfishr",
+  "ALLEYCVT",
+  "Balu Brigada",
+  "Sultan + Shepard",
+  "Frost Children",
+  "Miss Monique",
+  "Die Spitz",
+  "Carlita",
+  "MPH",
+  "Silvana Estrada",
+  "Momma",
+  "Dylan Brady",
+  "Goldie Boutilier",
+  "Haute & Freddy",
+  "Grace Ives",
+  "Kerala Dust",
+  "tobiahs",
+  "Wunderhorse",
+  "Amble",
+  "Sports",
+  "Yard Act",
+  "Faouzia",
+  "Infinity Song",
+  "Billie Marten",
+  "Marlon Funaki",
+  "SF Gay Men's Chorus",
+  "camoufly",
+  "Night Tapes",
+  "Bandalos Chinos",
+  "X CLUB.",
+  "Luke Alessi",
+  "After",
+  "Bad Nerves",
+  "Chezile",
+  "RIO KOSTA",
+  "sosocamo",
+  "Automatic",
+  "Sawyer Hill",
+  "1-800 GIRLS",
+  "NEZZA",
+  "Magnus Ferrell",
+  "Red Leather",
+  "Racing Mount Pleasant",
+  "Day We Ran",
+  "Ally Evenson",
+  "Etari",
+  "Britton",
+  "Cruz Beckham",
+  "RYMAN",
+  "Dani Satin and Always Hallways",
+  "Vertigo",
+  "bad juuju",
 ];
+
+const OSL_GENRES = [
+  "indie rock",
+  "electronic",
+  "hip hop",
+  "r&b",
+  "house",
+  "indie pop",
+  "alt rock",
+  "synth pop",
+  "folk rock",
+  "punk",
+  "dance",
+  "ambient",
+  "chill",
+  "experimental",
+  "electropop",
+  "soul",
+  "psychedelic",
+];
+
+const SPOTIFY_TOP_ARTIST_COUNT = 10;
+const SPOTIFY_TOP_GENRE_COUNT = 4;
+
+const createSeededRng = (seed: number) => {
+  let value = seed >>> 0;
+  return () => {
+    value = (value * 1664525 + 1013904223) >>> 0;
+    return value / 4294967296;
+  };
+};
+
+const pickUnique = (input: string[], count: number, rng: () => number) => {
+  const pool = [...input];
+  const result: string[] = [];
+  while (result.length < count && pool.length > 0) {
+    const idx = Math.floor(rng() * pool.length);
+    result.push(pool.splice(idx, 1)[0]);
+  }
+  return result;
+};
+
+const buildFallbackSpotifyProfile = (displayName: string) => {
+  const normalizedName = displayName.toLowerCase().trim();
+  const normalizedSeed = hashString(normalizedName);
+  const rng = createSeededRng(normalizedSeed + 20260902);
+
+  const sharedArtists = pickUnique(
+    OSL_LINEUP_ARTISTS.slice(0, SPOTIFY_TOP_ARTIST_COUNT),
+    Math.min(3, SPOTIFY_TOP_ARTIST_COUNT),
+    rng,
+  );
+  const remainingPool = OSL_LINEUP_ARTISTS.filter((artist) => !sharedArtists.includes(artist));
+  const topArtists = [...sharedArtists, ...pickUnique(remainingPool, SPOTIFY_TOP_ARTIST_COUNT - sharedArtists.length, rng)];
+
+  return {
+    handle: `@${normalizedSeed.toString(36).slice(-10) || "outside_fan"}`,
+    topArtists,
+    topGenres: pickUnique(OSL_GENRES, SPOTIFY_TOP_GENRE_COUNT, rng),
+    topTracks: topArtists.slice(0, SPOTIFY_TOP_ARTIST_COUNT).map((artist) => `${artist} highlight`),
+    source: "nameFallback",
+  };
+};
 
 const hashString = (value: string) => {
   let hash = 0;
@@ -141,18 +296,6 @@ const hashString = (value: string) => {
     hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
   }
   return hash;
-};
-
-const buildFallbackSpotifyProfile = (displayName: string) => {
-  const normalizedName = displayName.toLowerCase().trim();
-  const source = SPOTIFY_FALLBACK_PROFILES[hashString(normalizedName) % SPOTIFY_FALLBACK_PROFILES.length];
-  return {
-    handle: `@${source.handle}`,
-    topArtists: source.topArtists.slice(0, 5),
-    topGenres: source.topGenres.slice(0, 5),
-    topTracks: [],
-    source: "nameFallback",
-  };
 };
 
 const isLegacyDisplayName = (value: string | undefined | null) => {
