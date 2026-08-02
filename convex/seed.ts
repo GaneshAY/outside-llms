@@ -73,6 +73,7 @@ const REAL_NAMES = [
 ];
 const DIRECTIONS = ["arrival", "departure"] as const;
 const SCHEDULE_HOURS = [7, 10, 14, 18, 20] as const;
+const SCHEDULE_DUPLICATES = 2;
 
 const isAfterFestival = (ms: number) => ms > FESTIVAL_END - 60_000;
 
@@ -154,21 +155,32 @@ const BACKUP_STOPS = ["north_gate", "south_gate", "music_meadow", "hellman_hollo
 const CARPOOL_HOURS = [7, 10, 13, 16, 19, 22] as const;
 const LIME_HOURS = [6, 9, 11, 14, 17, 20] as const;
 
+const isLegacyDisplayName = (name: string | undefined) => {
+  const trimmed = (name ?? "").trim().toLowerCase();
+  return trimmed === "" || trimmed === "outside lander" || /^demo fan/.test(trimmed) || /^guest fan/.test(trimmed);
+};
+
+const normalizeDisplayName = (userName: string | undefined, index: number) =>
+  isLegacyDisplayName(userName)
+    ? REAL_NAMES[index % REAL_NAMES.length]
+    : userName ?? REAL_NAMES[index % REAL_NAMES.length];
+
 export const seedMockBackendData = mutation({
   args: { force: v.optional(v.boolean()) },
   handler: async (ctx, { force }) => {
     const existingIntents = await ctx.db.query("transitIntents").collect();
     const existingUsers = await ctx.db.query("users").collect();
     const existingFallback = await ctx.db.query("transitFallbackCache").collect();
-    const needsLegacyNameRefresh = existingUsers.some(
-      (user) => user.displayName.startsWith("Demo Fan") || user.displayName === "Guest fan" || user.displayName === "",
-    );
+    const needsLegacyNameRefresh = existingUsers.some((user) => isLegacyDisplayName(user.displayName));
 
     if (!force && existingIntents.length >= 200 && existingUsers.length >= 200) {
       if (needsLegacyNameRefresh) {
         for (let i = 0; i < existingUsers.length; i++) {
           const user = existingUsers[i];
-          await ctx.db.patch(user._id, { displayName: REAL_NAMES[i % REAL_NAMES.length] });
+          const displayName = normalizeDisplayName(user.displayName, i);
+          if (displayName !== user.displayName) {
+            await ctx.db.patch(user._id, { displayName });
+          }
         }
         return {
           seeded: true,
@@ -204,36 +216,48 @@ export const seedMockBackendData = mutation({
         const zoneIndex = DAYS.indexOf(locationZone);
         for (const direction of DIRECTIONS) {
           for (let slotIndex = 0; slotIndex < SCHEDULE_HOURS.length; slotIndex++) {
-            const desiredTime = dayStart + SCHEDULE_HOURS[slotIndex] * HOUR_MS +
-              ((slotIndex * 13 + zoneIndex * 7 + dayOffset * 3) % 30) * MINUTE_MS;
-            if (isAfterFestival(desiredTime)) continue;
+            for (let duplicate = 0; duplicate < SCHEDULE_DUPLICATES; duplicate++) {
+              const desiredTime = dayStart + SCHEDULE_HOURS[slotIndex] * HOUR_MS +
+                ((slotIndex * 13 + zoneIndex * 7 + dayOffset * 3 + duplicate * 9) % 30) * MINUTE_MS;
+              if (isAfterFestival(desiredTime)) continue;
 
-            const userId = await ctx.db.insert("users", { displayName: REAL_NAMES[insertedIntents % REAL_NAMES.length], authType: "guest" });
-            const flexibilityMinutes = 40 + (slotIndex * 5 + zoneIndex * 3) % 25;
-            const manualUrgentOverride = createdCount % 83 === 0;
+              const userId = await ctx.db.insert("users", { displayName: REAL_NAMES[insertedIntents % REAL_NAMES.length], authType: "guest" });
+              const flexibilityMinutes = 40 + (slotIndex * 5 + zoneIndex * 3 + duplicate) % 25;
+              const manualUrgentOverride = createdCount % 83 === 0;
 
-            await ctx.db.insert("transitIntents", {
-              userId,
-              direction,
-              desiredTime,
-              locationZone,
-              flexibilityMinutes,
-              startingPoint: STARTING_POINT_BY_ZONE[locationZone][insertedIntents % STARTING_POINT_BY_ZONE[locationZone].length],
-              tier: computeTier(desiredTime, FESTIVAL_START, manualUrgentOverride),
-              manualUrgentOverride,
-              status: "pending",
-              groupId:
-                createdCount < 3 ? "demo-group"
-                : createdCount % 4 === 0 ? "group-a"
-                  : createdCount % 6 === 0 ? "group-b"
-                  : undefined,
-            });
+              await ctx.db.insert("transitIntents", {
+                userId,
+                direction,
+                desiredTime,
+                locationZone,
+                flexibilityMinutes,
+                startingPoint: STARTING_POINT_BY_ZONE[locationZone][insertedIntents % STARTING_POINT_BY_ZONE[locationZone].length],
+                tier: computeTier(desiredTime, FESTIVAL_START, manualUrgentOverride),
+                manualUrgentOverride,
+                status: "pending",
+                groupId:
+                  createdCount < 3 ? "demo-group"
+                  : createdCount % 4 === 0 ? "group-a"
+                    : createdCount % 6 === 0 ? "group-b"
+                    : undefined,
+              });
 
-            insertedUsers += 1;
-            insertedIntents += 1;
-            createdCount += 1;
+              insertedUsers += 1;
+              insertedIntents += 1;
+              createdCount += 1;
+            }
           }
         }
+      }
+    }
+
+    // Additional hardening pass to normalize older mock user names in case placeholder records already exist.
+    // Keeps any user-entered custom names untouched while replacing only legacy mock placeholders.
+    for (let i = 0; i < existingUsers.length; i++) {
+      const user = existingUsers[i];
+      const displayName = normalizeDisplayName(user.displayName, i);
+      if (displayName !== user.displayName) {
+        await ctx.db.patch(user._id, { displayName });
       }
     }
 

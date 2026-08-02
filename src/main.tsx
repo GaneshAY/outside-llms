@@ -23,7 +23,9 @@ const MATCH_LIMIT = 8;
 const NO_MATCH_MESSAGE =
   "No immediate nearby matches found right now. Keep this plan open and we'll keep checking nearby plans as more fans sync.";
 const DEMO_LIVE_LOCATION = "501 Folsom St, San Francisco, CA 94105";
-const DEFAULT_PLAN_TIME = Date.parse("2026-08-07T10:00:00-07:00");
+const DEFAULT_PLAN_TIME = Date.parse("2026-08-07T07:00:00-07:00");
+const FESTIVAL_TZ_OFFSET = "-07:00";
+const FESTIVAL_TIME_ZONE = "America/Los_Angeles";
 
 const createDefaultPlanState = (): FormPlanState => ({
   name: "",
@@ -33,10 +35,29 @@ const createDefaultPlanState = (): FormPlanState => ({
   startingPoint: DEMO_LIVE_LOCATION,
 });
 
+const parsePlanTime = (value: string) => {
+  if (!value) return DEFAULT_PLAN_TIME;
+
+  const normalized = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)
+    ? `${value}:00${FESTIVAL_TZ_OFFSET}`
+    : value;
+
+  const parsed = Date.parse(normalized);
+  return Number.isNaN(parsed) ? DEFAULT_PLAN_TIME : parsed;
+};
+
 const formatDateTimeLocal = (valueMs: number) => {
-  const value = new Date(valueMs);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+  const value = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: FESTIVAL_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(valueMs));
+
+  return value.replace(" ", "T").slice(0, 16);
 };
 
 const zoneLabelMap = mockZones.reduce<Record<string, string>>((acc, [value, label]) => {
@@ -416,7 +437,7 @@ function PlanScreen({
   connectingMatchIds: MatchConnectState;
   connectedMatchIds: MatchConnectState;
 }) {
-  const now = Date.parse(state.planTime || "") || mockDataWindow.nowAnchor;
+  const now = parsePlanTime(state.planTime || "") || mockDataWindow.nowAnchor;
   const zoneLabel = zoneLabelMap[state.zone] ?? "North Gate";
 
   return (
@@ -498,7 +519,7 @@ function MockApp() {
   const [connectedMatchIds, setConnectedMatchIds] = useState<MatchConnectState>(new Set());
   const [connectingMatchIds, setConnectingMatchIds] = useState<MatchConnectState>(new Set());
 
-  const now = Date.parse(state.planTime || "") || mockDataWindow.nowAnchor;
+  const now = parsePlanTime(state.planTime || "") || mockDataWindow.nowAnchor;
 
   const nearbyMatches = useMemo(
     () => (created ? buildDemoMatchesWithConnectionState(state, now, connectedMatchIds) : []),
@@ -613,7 +634,7 @@ if (convexClient) {
     const [connectedMatchIds, setConnectedMatchIds] = useState<MatchConnectState>(new Set());
     const [connectingMatchIds, setConnectingMatchIds] = useState<MatchConnectState>(new Set());
 
-    const now = Date.parse(state.planTime || "") || mockDataWindow.nowAnchor;
+    const now = parsePlanTime(state.planTime || "") || mockDataWindow.nowAnchor;
 
     const seedStatus = useQuery(api.seed.seedDataStatus) as SeedStatus | null | undefined;
     const queryResult = useQuery(api.transit.matchingFansForIntent, {
@@ -668,7 +689,26 @@ if (convexClient) {
       if (isSaving) return;
       setIsSaving(true);
       setSaveError("");
-      const desiredTime = Date.parse(state.planTime);
+      const desiredTime = parsePlanTime(state.planTime);
+
+      if (!seedStatus?.seeded && !isSeedingBackend) {
+        setIsSeedingBackend(true);
+        setSaveError("Preparing the live fan pool before matching…");
+        try {
+          await seedBackend({ force: false });
+        } catch (error) {
+          setSaveError(
+            error instanceof Error
+              ? `Unable to prepare fan pool: ${error.message}`
+              : "Unable to prepare fan pool right now.",
+          );
+          setIsSaving(false);
+          setIsSeedingBackend(false);
+          return;
+        }
+        setIsSeedingBackend(false);
+        setSaveError("");
+      }
 
       try {
         const result = await createPlanWithGuest({

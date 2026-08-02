@@ -62,6 +62,7 @@ const FESTIVAL_END = Date.parse("2026-09-13T23:59:00-07:00");
 const DEMO_NOW = Date.parse("2026-08-02T12:00:00-07:00");
 const DAYS = Math.floor((FESTIVAL_END - FESTIVAL_START) / DAY_MS) + 1;
 const DEMO_SCHEDULE_HOURS = [7, 10, 14, 18] as const;
+const SCHEDULE_DUPLICATES = 3;
 const REAL_NAMES = [
   "Avery Stone",
   "Maya Collins",
@@ -273,33 +274,37 @@ function generateMockIntents() {
     "Transit garage A",
   ];
   const intents: DemoIntent[] = [];
+  const directions: Array<"arrival" | "departure"> = ["arrival", "departure"];
 
   for (let day = 0; day < DAYS; day++) {
     const dayStart = FESTIVAL_START + day * DAY_MS;
     for (const zone of zones) {
       const zoneIndex = zones.indexOf(zone);
-      for (let slotIndex = 0; slotIndex < DEMO_SCHEDULE_HOURS.length; slotIndex++) {
-        const direction = (slotIndex % 2) === 0 ? "arrival" : "departure";
-        const jitter = ((slotIndex * 11 + day * 17 + zoneIndex * 7) % 30) * MINUTE_MS;
-        const desiredTime = Math.min(
-          FESTIVAL_END - 60_000,
-          dayStart + DEMO_SCHEDULE_HOURS[slotIndex] * HOUR_MS + jitter,
-        );
-        const i = intents.length;
-        const flexibilityMinutes = 35 + (slotIndex * 4 + zoneIndex * 2) % 20;
-        const manualUrgentOverride = i % 83 === 0;
-        intents.push({
-          id: `demo-intent-${i + 1}`,
-          name: REAL_NAMES[i % REAL_NAMES.length],
-          direction,
-          desiredTime,
-          locationZone: zone,
-          flexibilityMinutes,
-          startingPoint: startingPoints[i % startingPoints.length],
-          manualUrgentOverride,
-          tier: computeMockTier(desiredTime, FESTIVAL_START, manualUrgentOverride),
-          groupId: groups[i % groups.length],
-        });
+      for (const direction of directions) {
+        for (let slotIndex = 0; slotIndex < DEMO_SCHEDULE_HOURS.length; slotIndex++) {
+          for (let duplicate = 0; duplicate < SCHEDULE_DUPLICATES; duplicate++) {
+            const jitter = ((slotIndex * 11 + day * 17 + zoneIndex * 7 + duplicate * 7) % 30) * MINUTE_MS;
+            const desiredTime = Math.min(
+              FESTIVAL_END - 60_000,
+              dayStart + DEMO_SCHEDULE_HOURS[slotIndex] * HOUR_MS + jitter,
+            );
+            const i = intents.length;
+            const flexibilityMinutes = 35 + (slotIndex * 4 + zoneIndex * 2 + duplicate) % 20;
+            const manualUrgentOverride = i % 83 === 0;
+            intents.push({
+              id: `demo-intent-${i + 1}`,
+              name: REAL_NAMES[i % REAL_NAMES.length],
+              direction,
+              desiredTime,
+              locationZone: zone,
+              flexibilityMinutes,
+              startingPoint: startingPoints[i % startingPoints.length],
+              manualUrgentOverride,
+              tier: computeMockTier(desiredTime, FESTIVAL_START, manualUrgentOverride),
+              groupId: groups[i % groups.length],
+            });
+          }
+        }
       }
     }
   }

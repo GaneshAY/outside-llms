@@ -14,6 +14,79 @@ export function compatible(a: {direction:string; desiredTime:number; flexibility
     Math.min(a.desiredTime + a.flexibilityMinutes * 60_000, b.desiredTime + b.flexibilityMinutes * 60_000);
 }
 
+const FAN_NAME_FALLBACKS = [
+  "Avery Stone",
+  "Maya Collins",
+  "Jordan Kim",
+  "Noah Rivera",
+  "Priya Shah",
+  "Ethan Brooks",
+  "Lena Patel",
+  "Carlos Ruiz",
+  "Nina Torres",
+  "Oliver Hale",
+  "Sofia Morales",
+  "Kai Chen",
+  "Grace Kim",
+  "Daniel Ortiz",
+  "Arihant Mehta",
+  "Emma Brooks",
+  "Liam Carter",
+  "Isabella Ross",
+  "Noah Bennett",
+  "Ava Johnson",
+  "Lucas Nguyen",
+  "Mila Rossi",
+  "Eli Chen",
+  "Jasmine Patel",
+  "Mateo Diaz",
+  "Olivia Grant",
+  "Noah Santiago",
+  "Aria Bell",
+  "Leo Martinez",
+  "Sara Kim",
+  "Nora Whitman",
+  "Ibrahim Yusuf",
+  "Chloe Bennett",
+  "Owen Park",
+  "Ivy Brooks",
+  "Mina Delgado",
+  "Yousef Farah",
+  "Harper Quinn",
+  "Rafael Diaz",
+  "Zoe Carter",
+  "Amelia Foster",
+  "Ethan Wong",
+  "Santiago Cruz",
+  "Nadia Khan",
+  "Mia Sanders",
+  "Theo Morgan",
+  "Luca Bellini",
+  "Noel Thompson",
+  "Isobel Wright",
+  "Julian Price",
+  "Anika Bose",
+  "Seth Kim",
+  "Leila Garcia",
+];
+
+const isLegacyDisplayName = (value: string | undefined | null) => {
+  const trimmed = (value ?? "").trim().toLowerCase();
+  return trimmed === "" || trimmed === "outside lander" || /^demo fan/.test(trimmed) || /^guest fan/.test(trimmed);
+};
+
+const fallbackFanName = (intentId: string, displayName?: string | null) => {
+  if (!isLegacyDisplayName(displayName)) {
+    return displayName ?? "Outside Lander";
+  }
+
+  let hash = 0;
+  for (let i = 0; i < intentId.length; i++) {
+    hash = (hash * 31 + intentId.charCodeAt(i)) >>> 0;
+  }
+  return FAN_NAME_FALLBACKS[hash % FAN_NAME_FALLBACKS.length];
+};
+
 function normalizeStartingPoint(value?: string) {
   const normalized = value?.trim().toLowerCase().replace(/\s+/g, " ");
   return normalized === "" ? undefined : normalized;
@@ -81,7 +154,7 @@ export const matchingFansForIntent = query({
 
     const withNames = await Promise.all(filtered.map(async (candidate) => {
       const user = candidate.userId ? await ctx.db.get(candidate.userId) : null;
-      const userName = user?.displayName ?? "Outside Lander";
+      const userName = fallbackFanName(candidate._id, user?.displayName);
       const deltaMinutes = Math.max(0, Math.round(Math.abs(candidate.desiredTime - current.desiredTime) / 60_000));
       const overlap = overlapMinutes(current, candidate);
       const candidateStart = normalizeStartingPoint(candidate.startingPoint);
