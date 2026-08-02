@@ -20,8 +20,11 @@ function App() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await generate({ artistName: artistName.trim() });
+      const accessCode = (import.meta.env.VITE_DEMO_ACCESS_CODE as string) ?? "";
+      const res = await generate({ artistName: artistName.trim(), accessCode });
       setResult(res);
+    } catch (err) {
+      setResult({ error: err instanceof Error ? err.message : "Something went wrong." });
     } finally {
       setLoading(false);
     }
@@ -59,7 +62,7 @@ function App() {
           <div className="section-heading"><div><p className="kicker">HISTORY</p><h2>Recent EPKs</h2></div></div>
           <div className="mobility-list">
             {history.map((h) => (
-              <article key={h._id}><span className="icon transit-icon">♪</span><div><b>{h.artistName}</b><small>{h.status === "ready" ? h.touringHistorySummary : h.errorMessage}</small></div><span className="tag">{h.usedRealJambaseData ? "live" : "mock"}</span></article>
+              <article key={h._id}><span className="icon transit-icon">♪</span><div><b>{h.artistName}</b><small>{new Date(h.createdAt).toLocaleTimeString()}</small></div><span className="tag">{h.status}</span></article>
             ))}
           </div>
         </section>

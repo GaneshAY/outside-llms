@@ -17,6 +17,7 @@ import {
 function App() {
   const [name, setName] = useState("");
   const [zone, setZone] = useState("north_gate");
+  const [direction, setDirection] = useState<"arrival" | "departure">("arrival");
   const [created, setCreated] = useState(false);
   const now = mockDataWindow.nowAnchor;
   const currentZone = zone as MockZone;
@@ -28,15 +29,39 @@ function App() {
   const nearbyTransit = transit.slice(0, 3);
 
   return <main>
-    <header><p className="eyebrow">OUTSIDE LANDS · OSL TOGETHER</p><span className="demo-pill">DEMO MODE</span></header>
+    <header><p className="eyebrow">OUTSIDE LANDS · OSL TOGETHER</p></header>
     <h1>Find your people on the way there.</h1>
     <p className="lede">A warm introduction to fans heading the same direction — with a transit fallback always in view.</p>
     <section className="card form-card"><div className="section-heading"><div><p className="kicker">01 · YOUR PLAN</p><h2>Make a travel plan</h2></div><span className="step">1 / 2</span></div>
       <label>Your name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest fan" /></label>
       <label>Park zone<select value={zone} onChange={(e) => setZone(e.target.value)}>{mockZones.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <div className="segmented"><button className="selected">Arriving</button><button>Leaving</button></div>
+      <div className="segmented">
+        <button
+          className={direction === "arrival" ? "selected" : ""}
+          onClick={() => setDirection("arrival")}
+          type="button"
+        >
+          Arriving
+        </button>
+        <button
+          className={direction === "departure" ? "selected" : ""}
+          onClick={() => setDirection("departure")}
+          type="button"
+        >
+          Leaving
+        </button>
+      </div>
       <label>When are you traveling?<input type="datetime-local" /></label>
-      <button className="primary" onClick={() => setCreated(true)}>{created ? "Plan saved ✓" : "Find compatible fans"}</button>
+      <button className="primary" onClick={() => setCreated(true)}>
+        {created ? (
+          "Plan saved ✓"
+        ) : (
+          <>
+            <span className="ai-stars" aria-label="AI matching" role="img">✨</span>
+            <span>AI is finding compatible fans</span>
+          </>
+        )}
+      </button>
       {created && <p className="success">Your plan is live. We’ll show compatible fans as they appear.</p>}
     </section>
     <section className="fallback"><div className="section-heading"><div><p className="kicker">02 · YOUR BACKUP PLAN</p><h2>Near {mockZones.find(([value]) => value === zone)?.[1]}</h2></div><span className="live-dot">● LIVE MOCK</span></div><p className="updated">{mockMobility.updatedLabel}</p>
