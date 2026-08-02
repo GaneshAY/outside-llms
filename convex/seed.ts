@@ -226,6 +226,12 @@ const normalizeDayIndex = (dayOffset: number) => {
   return safe;
 };
 
+const isSparseProfile = (profile: unknown) => {
+  if (!profile || typeof profile !== "object") return true;
+  const typed = profile as { topArtists?: unknown[] };
+  return !Array.isArray(typed.topArtists) || typed.topArtists.length < SPOTIFY_TOP_ARTIST_COUNT;
+};
+
 const getSpotifyProfileForIndex = (index: number, dayOffset = 0) => {
   const profileSeed = 20260902 + index * 97 + Math.max(0, dayOffset) * 31;
   const rng = createSeededRng(profileSeed);
@@ -345,7 +351,9 @@ export const seedMockBackendData = mutation({
     const existingIntents = await ctx.db.query("transitIntents").collect();
     const existingUsers = await ctx.db.query("users").collect();
     const existingFallback = await ctx.db.query("transitFallbackCache").collect();
-    const needsLegacyNameRefresh = existingUsers.some((user) => isLegacyDisplayName(user.displayName) || !user.spotifyProfile);
+    const needsLegacyNameRefresh = existingUsers.some(
+      (user) => isLegacyDisplayName(user.displayName) || isSparseProfile(user.spotifyProfile),
+    );
 
     if (!force && existingIntents.length >= 200 && existingUsers.length >= 200) {
       if (needsLegacyNameRefresh) {
@@ -365,7 +373,7 @@ export const seedMockBackendData = mutation({
           if (displayName !== user.displayName) {
             updates.displayName = displayName;
           }
-          if (!user.spotifyProfile) {
+          if (isSparseProfile(user.spotifyProfile)) {
             updates.spotifyProfile = getSpotifyProfileForIndex(i);
           }
           if (Object.keys(updates).length > 0) {
