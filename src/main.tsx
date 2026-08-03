@@ -287,61 +287,43 @@ function MatchingList({
               : fan.spotifyMatch?.score && fan.spotifyMatch.score >= 25 ? "music fit"
               : fan.overlapMinutes >= 30 ? "great fit"
                 : "good fit";
-          const matchTagClass = fan.sameGroup
-            ? "match-chip match-chip--group"
-            : fan.sameStartingPoint
-              ? "match-chip match-chip--start"
-              : fan.spotifyMatch?.score && fan.spotifyMatch.score >= 25
-                ? "match-chip match-chip--music"
-                : fan.overlapMinutes >= 30
-                  ? "match-chip match-chip--great"
-                  : "match-chip match-chip--good";
           const origin = fan.startingPoint?.trim();
           const isConnecting = connectingMatchIds.has(fan._id);
           const isConnected = connectedMatchIds.has(fan._id);
+
           const overlapArtists = fan.spotifyMatch?.overlapArtists ?? [];
           const overlapGenres = fan.spotifyMatch?.overlapGenres ?? [];
-          const overlapSummary: string[] = [];
-          const overlapSamples: string[] = [];
-
-          if (overlapArtists.length > 0) {
-            overlapSummary.push(`${overlapArtists.length} shared artists`);
-            overlapSamples.push(`shared artists: ${overlapArtists.slice(0, 2).join(", ")}`);
-          }
-          if (overlapGenres.length > 0) {
-            overlapSummary.push(`${overlapGenres.length} shared genres`);
-            overlapSamples.push(`shared genres: ${overlapGenres.slice(0, 2).join(", ")}`);
-          }
-
-          const avatarLetter = fan.userName?.trim().charAt(0)?.toUpperCase() ?? "O";
 
           return (
-            <article key={fan._id} className="fan-card">
-              <header className="fan-card__header">
-                <span className="fan-avatar" aria-hidden="true">
-                  {fan.sameGroup ? "✨" : avatarLetter}
-                </span>
-                <div className="fan-card__identity">
-                  <strong className="fan-name">{fan.userName}</strong>
-                  <p className="fan-meta-line">
-                    {friendlyDirection} in {zoneLabelMap[fan.locationZone] ?? fan.locationZone} · {formatClock(fan.desiredTime)} · {fan.deltaMinutes} min
-                  </p>
-                  <p className="fan-meta-line fan-meta-line--subtle">
-                    Starting from {origin || "Unknown"}
-                  </p>
-                </div>
-                <span className={matchTagClass}>{tag}</span>
-              </header>
-              <p className="fan-meta">
-                Overlap window: ±{fan.flexibilityMinutes} min
-              </p>
-              {fan.spotifyMatch && fan.spotifyMatch.score > 0 && (
-                <p className="fan-spotify">
-                  🎶 Spotify: {fan.spotifyMatch.label}
-                  {overlapSummary.length > 0 ? ` · ${overlapSummary.join(" · ")}` : ""}
-                  {overlapSamples.length > 0 ? ` · ${overlapSamples.join(" · ")}` : ""}
-                </p>
-              )}
+            <article key={fan._id}>
+              <span className="icon fan-icon">{fan.sameGroup ? "✨" : "👤"}</span>
+              <div>
+                <b>{fan.userName}</b>
+                <small>
+                  {friendlyDirection} in {zoneLabelMap[fan.locationZone] ?? fan.locationZone} · target {formatClock(fan.desiredTime)} • {fan.deltaMinutes} min
+                </small>
+                <small>
+                  Overlap window: ±{fan.flexibilityMinutes} min {origin ? `· from ${origin}` : ""}
+                </small>
+                {fan.spotifyMatch && fan.spotifyMatch.score > 0 && (
+                  <small>
+                    🎶 Spotify: {fan.spotifyMatch.label}
+                    {overlapArtists.length > 0
+                      ? ` · ${overlapArtists.length} shared artists`
+                      : overlapGenres.length > 0
+                        ? ` · ${overlapGenres.length} shared genres`
+                        : ""
+                    }
+                    {overlapArtists.length > 0
+                      ? ` · shared artists: ${overlapArtists.slice(0, 2).join(", ")}`
+                      : overlapGenres.length > 0
+                        ? ` · shared genres: ${overlapGenres.slice(0, 2).join(", ")}`
+                        : ""
+                    }
+                  </small>
+                )}
+              </div>
+              <span className="tag">{tag}</span>
               <button
                 className={`connect-btn ${isConnected ? "connected" : ""}`}
                 onClick={() => onConnect(fan._id)}
