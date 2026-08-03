@@ -142,6 +142,9 @@ input, select {
   display: grid;
   gap: 12px;
   margin-top: 8px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .fan-card {
@@ -152,6 +155,9 @@ input, select {
   border-top: 1px solid #3d4a39;
   border-radius: 14px;
   background: #263028;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .fan-card__header {
@@ -159,6 +165,12 @@ input, select {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.fan-card__header > * {
+  min-width: 0;
 }
 
 .fan-avatar {
@@ -174,6 +186,7 @@ input, select {
 .fan-card__identity {
   flex: 1;
   min-width: 0;
+  width: 0;
 }
 
 .fan-name {
@@ -188,13 +201,15 @@ input, select {
   color: #a7ac9e;
   font-size: 11px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .fan-meta-line--subtle {
   color: #8f9988;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .fan-meta {
@@ -202,6 +217,7 @@ input, select {
   color: #adb5a4;
   font-size: 12px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .fan-spotify {
@@ -209,6 +225,13 @@ input, select {
   color: #d2ddc2;
   font-size: 11px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.fan-meta,
+.fan-spotify,
+.fan-meta-line--subtle {
+  min-width: 0;
 }
 
 .match-chip {
@@ -245,6 +268,10 @@ input, select {
 .match-chip--good {
   border-color: #8da3ff;
   color: #b4c0ff;
+}
+
+.match-card {
+  overflow: hidden;
 }
 
 .mobility-list article > div { min-width: 0; flex: 1; }
