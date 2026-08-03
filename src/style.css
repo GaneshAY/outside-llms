@@ -184,9 +184,8 @@ input, select {
 }
 
 .fan-card__identity {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
-  width: 0;
 }
 
 .fan-name {
@@ -201,15 +200,15 @@ input, select {
   color: #a7ac9e;
   font-size: 11px;
   line-height: 1.35;
-  overflow-wrap: anywhere;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .fan-meta-line--subtle {
   color: #8f9988;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: normal;
-  word-break: break-word;
+  white-space: nowrap;
 }
 
 .fan-meta {
@@ -217,7 +216,8 @@ input, select {
   color: #adb5a4;
   font-size: 12px;
   line-height: 1.35;
-  overflow-wrap: anywhere;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .fan-spotify {
@@ -225,7 +225,8 @@ input, select {
   color: #d2ddc2;
   font-size: 11px;
   line-height: 1.35;
-  overflow-wrap: anywhere;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .fan-meta,
